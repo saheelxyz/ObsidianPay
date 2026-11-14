@@ -1,0 +1,2447 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obsidian Pay — Personal Fintech Wallet</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        obsidian: '#0B0E14',
+                        slatecard: '#141923',
+                        slateborder: '#1F2737',
+                        accent: '#6366F1',
+                        accentGlow: '#818CF8',
+                        emeraldFintech: '#10B981',
+                        roseFintech: '#F43F5E',
+                        amberFintech: '#F59E0B'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #05070A;
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Custom subtle scrollbars */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #273144;
+            border-radius: 9999px;
+        }
+        .smooth-scroll-area {
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+            will-change: scroll-position;
+        }
+        #cards-carousel {
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            cursor: grab;
+            perspective: 1200px;
+        }
+        #cards-carousel.is-dragging {
+            scroll-behavior: auto;
+            scroll-snap-type: none;
+            cursor: grabbing;
+        }
+        .card-slide {
+            transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.38s ease, box-shadow 0.38s ease;
+            will-change: transform, opacity;
+        }
+        /* Shimmer & Entrance Animations */
+        @keyframes shimmerSweep {
+            0% { transform: translateX(-140%) skewX(-20deg); }
+            100% { transform: translateX(240%) skewX(-20deg); }
+        }
+        .card-shimmer::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 45%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+            animation: shimmerSweep 5.5s infinite ease-in-out;
+            pointer-events: none;
+        }
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(14px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-reveal {
+            animation: fadeSlideUp 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        @keyframes modalSheetIn {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .animate-sheet-in {
+            animation: modalSheetIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        /* Laser scan line animation */
+        @keyframes scanLaser {
+            0%, 100% { top: 8%; opacity: 0.4; }
+            50% { top: 88%; opacity: 1; }
+        }
+        .laser-line {
+            position: absolute;
+            left: 6%;
+            right: 6%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #6366F1, #38BDF8, #6366F1, transparent);
+            box-shadow: 0 0 12px 2px rgba(99, 102, 241, 0.8);
+            animation: scanLaser 2.6s ease-in-out infinite;
+        }
+        /* Privacy blur class */
+        .privacy-masked {
+            filter: blur(7px);
+            transition: filter 0.25s ease;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+
+    <meta name="theme-color" content="#0B0E14">
+    <meta name="description" content="Obsidian Pay personal wallet and Nepal Bank offline balance tracker">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+    <script>
+      if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+        window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(err => console.warn('PWA offline support unavailable:', err)));
+      }
+    </script>
+</head>
+<body class="min-h-screen flex items-center justify-center p-0 sm:p-4 text-slate-100">
+
+    <!-- Mobile Device Frame -->
+    <div id="app-shell" class="w-full max-w-[430px] h-[100vh] sm:h-[860px] bg-obsidian sm:rounded-[44px] shadow-[0_25px_70px_-15px_rgba(0,0,0,0.9)] flex flex-col justify-between relative overflow-hidden border-0 sm:border-[8px] border-[#1A202C]">
+
+        <!-- Top Status / App Header -->
+        <header class="px-6 pt-6 pb-3 flex items-center justify-between z-20 bg-obsidian/90 backdrop-blur-md">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center font-display font-bold text-white shadow-lg shadow-indigo-500/25">
+                    <i class="fa-solid fa-layer-group text-sm"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-1.5">
+                        <span id="header-greeting" class="text-sm font-semibold text-white tracking-tight">Alex Morgan</span>
+                        <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 rounded-md border border-indigo-500/30">Metal+</span>
+                    </div>
+                    <p id="header-subtitle" class="text-[11px] text-slate-400">Personal Vault</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <!-- Quick Privacy Eye Toggle -->
+                <button onclick="togglePrivacyMode()" id="btn-header-eye" title="Toggle Balance Privacy" class="w-9 h-9 rounded-full bg-slatecard border border-slateborder flex items-center justify-center text-slate-300 hover:text-white hover:border-slate-600 transition active:scale-95">
+                    <i class="fa-solid fa-eye text-xs"></i>
+                </button>
+                <!-- Notifications -->
+                <button onclick="showToast('All security checks passed · 0 unread alerts')" class="relative w-9 h-9 rounded-full bg-slatecard border border-slateborder flex items-center justify-center text-slate-300 hover:text-white hover:border-slate-600 transition active:scale-95">
+                    <i class="fa-regular fa-bell text-xs"></i>
+                    <span class="w-2 h-2 rounded-full bg-indigo-500 absolute top-2 right-2.5"></span>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN SCROLLABLE VIEWPORT -->
+        <main id="main-viewport" class="flex-1 overflow-y-auto overflow-x-hidden relative pb-28 smooth-scroll-area">
+
+            <!-- ==========================================
+                 TAB 1: HOME / WALLET VIEW
+            =========================================== -->
+            <section id="tab-wallet" class="px-5 pt-2 space-y-6 transition-opacity duration-300">
+                
+                <!-- Total Net Worth Summary -->
+                <div class="bg-slatecard/80 border border-slateborder rounded-3xl p-5 flex items-center justify-between animate-reveal">
+                    <div>
+                        <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Demo Wallet Balance</span>
+                        <div class="flex items-baseline space-x-2 mt-1">
+                            <h1 id="total-net-balance" class="text-3xl font-display font-extrabold text-white tracking-tight money-val">$18,450.00</h1>
+                            <span class="text-[9px] font-semibold text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-full">Sample data</span>
+                        </div>
+                    </div>
+                    <button onclick="switchTab('analytics')" class="w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center hover:bg-indigo-500/20 transition active:scale-95">
+                        <i class="fa-solid fa-chart-line text-sm"></i>
+                    </button>
+                </div>
+
+                <!-- NEPAL BANK OFFLINE TRACKER: manually entered / statement-imported data only -->
+                <section class="bg-slatecard border border-emerald-500/25 rounded-3xl p-4 space-y-3 animate-reveal" aria-label="Nepal Bank offline tracker">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center"><i class="fa-solid fa-building-columns"></i></span>
+                                <div>
+                                    <h2 class="text-sm font-bold text-white">Nepal Bank</h2>
+                                    <p class="text-[10px] text-slate-400">Offline account tracker · NPR</p>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="text-[9px] font-bold uppercase tracking-wide px-2 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">Manual / imported</span>
+                    </div>
+                    <div class="rounded-2xl bg-[#0B0E14] border border-slateborder p-3">
+                        <p class="text-[10px] text-slate-400 uppercase tracking-wider">Recorded bank balance</p>
+                        <div id="nb-balance" class="text-2xl font-display font-extrabold text-white mt-1">रू 0.00</div>
+                        <p id="nb-updated" class="text-[10px] text-slate-500 mt-1">No balance entered yet</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="nbOpenBalanceEditor()" class="rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2.5"><i class="fa-solid fa-pen-to-square mr-1"></i> Update balance</button>
+                        <button onclick="nbOpenTransactionEditor()" class="rounded-xl bg-slate-800 hover:bg-slate-700 border border-slateborder text-white text-xs font-bold py-2.5"><i class="fa-solid fa-plus mr-1"></i> Add transaction</button>
+                    </div>
+                    <div class="flex flex-wrap gap-3 text-[11px]">
+                        <button onclick="document.getElementById('nb-csv-file').click()" class="text-indigo-300 font-semibold"><i class="fa-solid fa-file-import mr-1"></i> Import statement CSV</button>
+                        <button onclick="nbExportCSV()" class="text-indigo-300 font-semibold"><i class="fa-solid fa-file-export mr-1"></i> Export CSV</button>
+                    </div>
+                    <input id="nb-csv-file" type="file" accept=".csv,text/csv" class="hidden" onchange="nbImportCSV(event)">
+                    <div class="border-t border-slateborder pt-3">
+                        <div class="flex justify-between items-center mb-2"><h3 class="text-xs font-bold text-white">Recent bank transactions</h3><span id="nb-tx-count" class="text-[10px] text-slate-500">0 records</span></div>
+                        <div id="nb-transactions" class="space-y-2"><p class="text-[11px] text-slate-500">Import a Nepal Bank statement CSV or add transactions manually.</p></div>
+                    </div>
+                    <p class="text-[10px] leading-relaxed text-amber-200/80"><i class="fa-solid fa-circle-info mr-1"></i>This is not a live bank connection. Values are entered by you or imported from a statement. They are not verified by Nepal Bank.</p>
+                </section>
+
+                <!-- Interactive Slideable Card Carousel -->
+                <div class="animate-reveal" style="animation-delay: 0.05s;">
+                    <div class="flex items-center justify-between mb-3 px-1">
+                        <div class="flex items-center space-x-2">
+                            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Demo Cards</h2>
+                            <span id="card-count-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slatecard border border-slateborder text-slate-300">3</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <!-- Left / Right Quick Nav Chevrons -->
+                            <div class="flex items-center space-x-1">
+                                <button onclick="slideCardBy(-1)" id="btn-prev-card" title="Previous Card" class="w-6 h-6 rounded-lg bg-slatecard border border-slateborder text-slate-400 hover:text-white flex items-center justify-center transition active:scale-90">
+                                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                </button>
+                                <button onclick="slideCardBy(1)" id="btn-next-card" title="Next Card" class="w-6 h-6 rounded-lg bg-slatecard border border-slateborder text-slate-400 hover:text-white flex items-center justify-center transition active:scale-90">
+                                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                </button>
+                            </div>
+                            <button onclick="openAddCardModal()" class="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-[11px] font-bold flex items-center space-x-1 transition active:scale-95">
+                                <i class="fa-solid fa-plus text-[9px]"></i>
+                                <span>Add Card</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Horizontal Snap Cards Track -->
+                    <div id="cards-carousel" class="flex space-x-3.5 overflow-x-auto snap-x snap-mandatory no-scrollbar py-1 px-1">
+                        <!-- Rendered dynamically via JS -->
+                    </div>
+
+                    <!-- Pagination Dots & Active Card Label -->
+                    <div class="flex items-center justify-between mt-2.5 px-1">
+                        <span id="active-card-indicator-label" class="text-[11px] font-medium text-slate-400">Active: Platinum Debit</span>
+                        <div id="card-dots" class="flex items-center space-x-1.5"></div>
+                    </div>
+
+                    <!-- Card Controls Pill Bar (Freeze, Details, Limit, Remove) -->
+                    <div class="grid grid-cols-4 gap-2 mt-3">
+                        <button onclick="toggleCardFreeze()" id="btn-freeze-card" class="bg-slatecard border border-slateborder hover:border-slate-600 rounded-2xl py-2.5 px-2 flex flex-col items-center justify-center space-y-1 text-[11px] font-medium text-slate-200 transition active:scale-95">
+                            <i class="fa-solid fa-snowflake text-sky-400 text-xs"></i>
+                            <span id="freeze-label">Freeze</span>
+                        </button>
+                        <button onclick="toggleCardDetails()" id="btn-reveal-card" class="bg-slatecard border border-slateborder hover:border-slate-600 rounded-2xl py-2.5 px-2 flex flex-col items-center justify-center space-y-1 text-[11px] font-medium text-slate-200 transition active:scale-95">
+                            <i class="fa-solid fa-shield-halved text-indigo-400 text-xs"></i>
+                            <span id="reveal-label">Details</span>
+                        </button>
+                        <button onclick="openCardLimitModal()" class="bg-slatecard border border-slateborder hover:border-slate-600 rounded-2xl py-2.5 px-2 flex flex-col items-center justify-center space-y-1 text-[11px] font-medium text-slate-200 transition active:scale-95">
+                            <i class="fa-solid fa-sliders text-amberFintech text-xs"></i>
+                            <span>Limits</span>
+                        </button>
+                        <button onclick="confirmRemoveActiveCard()" class="bg-slatecard border border-slateborder hover:border-rose-500/40 rounded-2xl py-2.5 px-2 flex flex-col items-center justify-center space-y-1 text-[11px] font-medium text-rose-300 transition active:scale-95">
+                            <i class="fa-regular fa-trash-can text-roseFintech text-xs"></i>
+                            <span>Remove</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Actions Row -->
+                <div class="grid grid-cols-4 gap-3 animate-reveal" style="animation-delay: 0.1s;">
+                    <button onclick="openActionModal('send')" class="flex flex-col items-center space-y-2 group">
+                        <div class="w-full aspect-square max-w-[56px] rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/25 group-hover:bg-indigo-500 transition transform group-active:scale-95">
+                            <i class="fa-solid fa-paper-plane text-base"></i>
+                        </div>
+                        <span class="text-xs font-medium text-slate-300">Send</span>
+                    </button>
+                    <button onclick="openActionModal('add')" class="flex flex-col items-center space-y-2 group">
+                        <div class="w-full aspect-square max-w-[56px] rounded-2xl bg-slatecard border border-slateborder text-slate-200 flex items-center justify-center group-hover:border-slate-600 transition transform group-active:scale-95">
+                            <i class="fa-solid fa-plus text-base text-emeraldFintech"></i>
+                        </div>
+                        <span class="text-xs font-medium text-slate-300">Add Money</span>
+                    </button>
+                    <button onclick="openCardTransferModal()" class="flex flex-col items-center space-y-2 group">
+                        <div class="w-full aspect-square max-w-[56px] rounded-2xl bg-slatecard border border-slateborder text-slate-200 flex items-center justify-center group-hover:border-slate-600 transition transform group-active:scale-95">
+                            <i class="fa-solid fa-right-left text-base text-sky-400"></i>
+                        </div>
+                        <span class="text-xs font-medium text-slate-300">Move</span>
+                    </button>
+                    <button onclick="openActionModal('exchange')" class="flex flex-col items-center space-y-2 group">
+                        <div class="w-full aspect-square max-w-[56px] rounded-2xl bg-slatecard border border-slateborder text-slate-200 flex items-center justify-center group-hover:border-slate-600 transition transform group-active:scale-95">
+                            <i class="fa-solid fa-arrows-rotate text-base text-amberFintech"></i>
+                        </div>
+                        <span class="text-xs font-medium text-slate-300">FX Rates</span>
+                    </button>
+                </div>
+
+                <!-- Utility & Bill Payments Hub (Multi-Wallet Standard) -->
+                <div class="animate-reveal" style="animation-delay: 0.14s;">
+                    <div class="flex items-center justify-between mb-2.5 px-1">
+                        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Pay Bills & Services</h3>
+                        <span class="text-[10px] font-semibold text-emeraldFintech">0% Convenience Fee</span>
+                    </div>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button onclick="openUtilityModal('Mobile Top-Up', 'fa-mobile-screen-button', 'Bills')" class="bg-slatecard/90 hover:bg-slate-800/90 border border-slateborder rounded-2xl p-3 flex flex-col items-center space-y-1.5 transition active:scale-95">
+                            <div class="w-8 h-8 rounded-xl bg-sky-500/15 text-sky-400 flex items-center justify-center"><i class="fa-solid fa-mobile-screen-button text-xs"></i></div>
+                            <span class="text-[11px] font-semibold text-slate-200">Top-Up</span>
+                        </button>
+                        <button onclick="openUtilityModal('Electricity Bill', 'fa-bolt', 'Bills')" class="bg-slatecard/90 hover:bg-slate-800/90 border border-slateborder rounded-2xl p-3 flex flex-col items-center space-y-1.5 transition active:scale-95">
+                            <div class="w-8 h-8 rounded-xl bg-amber-500/15 text-amberFintech flex items-center justify-center"><i class="fa-solid fa-bolt text-xs"></i></div>
+                            <span class="text-[11px] font-semibold text-slate-200">Electricity</span>
+                        </button>
+                        <button onclick="openUtilityModal('Fiber Internet', 'fa-wifi', 'Bills')" class="bg-slatecard/90 hover:bg-slate-800/90 border border-slateborder rounded-2xl p-3 flex flex-col items-center space-y-1.5 transition active:scale-95">
+                            <div class="w-8 h-8 rounded-xl bg-indigo-500/15 text-indigo-400 flex items-center justify-center"><i class="fa-solid fa-wifi text-xs"></i></div>
+                            <span class="text-[11px] font-semibold text-slate-200">Internet</span>
+                        </button>
+                        <button onclick="openUtilityModal('Flight Booking', 'fa-plane-departure', 'Travel')" class="bg-slatecard/90 hover:bg-slate-800/90 border border-slateborder rounded-2xl p-3 flex flex-col items-center space-y-1.5 transition active:scale-95">
+                            <div class="w-8 h-8 rounded-xl bg-emerald-500/15 text-emeraldFintech flex items-center justify-center"><i class="fa-solid fa-plane-departure text-xs"></i></div>
+                            <span class="text-[11px] font-semibold text-slate-200">Flights</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Savings Vaults / Pockets (Horizontal Slideable) -->
+                <div class="animate-reveal" style="animation-delay: 0.18s;">
+                    <div class="flex items-center justify-between mb-2.5 px-1">
+                        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Savings Goals</h3>
+                        <button onclick="openCreateGoalModal()" class="text-[11px] font-bold text-indigo-400 hover:text-indigo-300">+ New Goal</button>
+                    </div>
+                    <div id="savings-goals-track" class="flex space-x-3 overflow-x-auto no-scrollbar pb-1">
+                        <!-- Rendered dynamically -->
+                    </div>
+                </div>
+
+                <!-- Recent Transactions List -->
+                <div class="animate-reveal" style="animation-delay: 0.22s;">
+                    <div class="flex items-center justify-between mb-3 px-1">
+                        <div class="flex items-center space-x-2">
+                            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Demo Activity</h3>
+                            <button onclick="toggleTxFilterByCard()" id="btn-filter-card-tx" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slatecard border border-slateborder text-slate-400 hover:text-white transition">
+                                All Cards
+                            </button>
+                        </div>
+                        <button onclick="switchTab('analytics')" class="text-xs font-semibold text-indigo-400 hover:text-indigo-300">See Analytics</button>
+                    </div>
+                    <div id="home-transactions-list" class="space-y-2.5">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 TAB 2: ANALYTICS VIEW (WORKABLE)
+            =========================================== -->
+            <section id="tab-analytics" class="hidden px-5 pt-2 space-y-5">
+                <!-- Header & Timeframe Switcher -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-display font-bold text-white tracking-tight">Analytics</h2>
+                        <p class="text-xs text-slate-400">Cashflow & spending insights</p>
+                    </div>
+                    <div class="bg-slatecard border border-slateborder p-1 rounded-xl flex items-center text-xs font-semibold">
+                        <button onclick="setAnalyticsTimeframe('Week')" id="tf-Week" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white transition">Week</button>
+                        <button onclick="setAnalyticsTimeframe('Month')" id="tf-Month" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Month</button>
+                        <button onclick="setAnalyticsTimeframe('Year')" id="tf-Year" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Year</button>
+                    </div>
+                </div>
+
+                <!-- KPI Summary Cards -->
+                <div class="grid grid-cols-3 gap-2.5">
+                    <div class="bg-slatecard border border-slateborder rounded-2xl p-3.5">
+                        <div class="flex items-center space-x-1.5 text-emeraldFintech text-[11px] font-medium mb-1">
+                            <i class="fa-solid fa-arrow-trend-up"></i>
+                            <span>Income</span>
+                        </div>
+                        <div id="kpi-income" class="text-sm font-bold text-white money-val">$4,250</div>
+                    </div>
+                    <div class="bg-slatecard border border-slateborder rounded-2xl p-3.5">
+                        <div class="flex items-center space-x-1.5 text-roseFintech text-[11px] font-medium mb-1">
+                            <i class="fa-solid fa-arrow-trend-down"></i>
+                            <span>Spent</span>
+                        </div>
+                        <div id="kpi-spent" class="text-sm font-bold text-white money-val">$1,840</div>
+                    </div>
+                    <div class="bg-slatecard border border-slateborder rounded-2xl p-3.5">
+                        <div class="flex items-center space-x-1.5 text-indigo-400 text-[11px] font-medium mb-1">
+                            <i class="fa-solid fa-piggy-bank"></i>
+                            <span>Savings</span>
+                        </div>
+                        <div id="kpi-savings" class="text-sm font-bold text-white money-val">$2,410</div>
+                    </div>
+                </div>
+
+                <!-- Interactive SVG Cashflow Chart -->
+                <div class="bg-slatecard border border-slateborder rounded-3xl p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <span class="text-xs text-slate-400">Selected Period Activity</span>
+                            <div id="chart-hover-val" class="text-base font-bold text-white mt-0.5 money-val">Tap a bar to inspect</div>
+                        </div>
+                        <div class="flex items-center space-x-3 text-[11px]">
+                            <span class="flex items-center space-x-1 text-slate-300"><span class="w-2 h-2 rounded-full bg-indigo-500"></span><span>Spent</span></span>
+                            <span class="flex items-center space-x-1 text-slate-300"><span class="w-2 h-2 rounded-full bg-emerald-400"></span><span>Income</span></span>
+                        </div>
+                    </div>
+                    <!-- SVG Chart Container -->
+                    <div id="analytics-chart-container" class="w-full h-44 relative">
+                        <!-- Rendered dynamically -->
+                    </div>
+                </div>
+
+                <!-- Monthly Budget Limit Progress -->
+                <div class="bg-slatecard border border-slateborder rounded-3xl p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div>
+                            <h3 class="text-sm font-semibold text-white">Spending Budget Limit</h3>
+                            <p class="text-xs text-slate-400 mt-0.5">
+                                <span id="budget-used-text" class="text-white font-semibold money-val">$1,840</span> of 
+                                <span id="budget-limit-text" class="money-val">$3,000</span> limit
+                            </p>
+                        </div>
+                        <button onclick="openBudgetModal()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-indigo-400 border border-slateborder transition">
+                            Edit Limit
+                        </button>
+                    </div>
+                    <div class="w-full h-2.5 bg-obsidian rounded-full overflow-hidden mt-3">
+                        <div id="budget-progress-bar" class="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-500" style="width: 61%;"></div>
+                    </div>
+                </div>
+
+                <!-- Category Breakdown & Filter -->
+                <div>
+                    <div class="flex items-center justify-between mb-3 px-1">
+                        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Spending by Category</h3>
+                        <button id="btn-clear-cat-filter" onclick="filterAnalyticsCategory(null)" class="hidden text-xs font-semibold text-indigo-400 hover:text-indigo-300">Show All</button>
+                    </div>
+                    <div id="category-breakdown-list" class="space-y-2.5">
+                        <!-- Rendered dynamically -->
+                    </div>
+                </div>
+
+                <!-- Filtered Category Transactions -->
+                <div>
+                    <h3 id="analytics-tx-heading" class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 px-1">All Period Transactions</h3>
+                    <div id="analytics-transactions-list" class="space-y-2.5">
+                        <!-- Rendered dynamically -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 TAB 3: SCAN QR & MY QR VIEW (WORKABLE)
+            =========================================== -->
+            <section id="tab-scan" class="hidden px-5 pt-2 space-y-5">
+                <!-- Dual Mode Switcher -->
+                <div class="bg-slatecard border border-slateborder p-1.5 rounded-2xl grid grid-cols-2 gap-1">
+                    <button onclick="setScanSubMode('scanner')" id="btn-mode-scanner" class="py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold shadow transition">
+                        <i class="fa-solid fa-qrcode mr-1.5"></i>Scan QR
+                    </button>
+                    <button onclick="setScanSubMode('myqr')" id="btn-mode-myqr" class="py-2.5 rounded-xl text-slate-400 hover:text-white text-xs font-bold transition">
+                        <i class="fa-solid fa-id-badge mr-1.5"></i>My QR Code
+                    </button>
+                </div>
+
+                <!-- SUB-MODE A: LIVE QR SCANNER -->
+                <div id="scan-sub-scanner" class="space-y-4">
+                    <!-- Simulated Viewfinder Box -->
+                    <div id="qr-viewfinder" class="relative w-full aspect-square max-h-[310px] mx-auto rounded-[32px] bg-[#07090D] border-2 border-slateborder overflow-hidden flex flex-col items-center justify-center shadow-inner">
+                        <!-- Subtle ambient grid pattern -->
+                        <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(#6366F1 1px, transparent 1px); background-size: 20px 20px;"></div>
+                        
+                        <!-- Flashlight glow overlay -->
+                        <div id="flashlight-overlay" class="absolute inset-0 bg-amber-200/10 pointer-events-none hidden transition-opacity"></div>
+
+                        <!-- Corner Brackets -->
+                        <div class="w-52 h-52 relative flex items-center justify-center">
+                            <span class="absolute top-0 left-0 w-7 h-7 border-t-4 border-l-4 border-indigo-500 rounded-tl-2xl"></span>
+                            <span class="absolute top-0 right-0 w-7 h-7 border-t-4 border-r-4 border-indigo-500 rounded-tr-2xl"></span>
+                            <span class="absolute bottom-0 left-0 w-7 h-7 border-b-4 border-l-4 border-indigo-500 rounded-bl-2xl"></span>
+                            <span class="absolute bottom-0 right-0 w-7 h-7 border-b-4 border-r-4 border-indigo-500 rounded-br-2xl"></span>
+                            
+                            <!-- Animated Laser Line -->
+                            <div class="laser-line"></div>
+
+                            <div class="text-center px-4">
+                                <i class="fa-solid fa-expand text-2xl text-slate-600 mb-2"></i>
+                                <p class="text-[11px] text-slate-400 font-medium">Align merchant or peer QR within frame</p>
+                            </div>
+                        </div>
+
+                        <!-- Viewfinder Bottom Controls (Flashlight & Gallery) -->
+                        <div class="absolute bottom-4 inset-x-6 flex items-center justify-between">
+                            <button onclick="toggleFlashlight()" id="btn-flashlight" class="w-10 h-10 rounded-full bg-slatecard/90 border border-slateborder text-slate-300 flex items-center justify-center hover:text-white transition">
+                                <i class="fa-solid fa-bolt text-xs"></i>
+                            </button>
+                            <button onclick="triggerSimulatedScan(0)" class="px-4 py-2 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition active:scale-95">
+                                Simulate Scan
+                            </button>
+                            <button onclick="simulateGalleryUpload()" class="w-10 h-10 rounded-full bg-slatecard/90 border border-slateborder text-slate-300 flex items-center justify-center hover:text-white transition" title="Upload QR from Gallery">
+                                <i class="fa-regular fa-image text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Demo Scan Presets -->
+                    <div>
+                        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2.5 px-1">Quick Test Sample QRs</h3>
+                        <div class="space-y-2">
+                            <button onclick="triggerSimulatedScan(0)" class="w-full bg-slatecard hover:bg-slate-800/90 border border-slateborder rounded-2xl p-3.5 flex items-center justify-between text-left transition">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center">
+                                        <i class="fa-solid fa-mug-hot text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-white">Blue Bottle Coffee</div>
+                                        <div class="text-[11px] text-slate-400">Merchant QR · Food & Dining</div>
+                                    </div>
+                                </div>
+                                <span class="text-xs font-bold text-indigo-400 money-val">$6.50 →</span>
+                            </button>
+
+                            <button onclick="triggerSimulatedScan(1)" class="w-full bg-slatecard hover:bg-slate-800/90 border border-slateborder rounded-2xl p-3.5 flex items-center justify-between text-left transition">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+                                        <i class="fa-solid fa-user-check text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-white">Alex Rivera (@alex.r)</div>
+                                        <div class="text-[11px] text-slate-400">Peer Transfer · Instant</div>
+                                    </div>
+                                </div>
+                                <span class="text-xs font-bold text-indigo-400 money-val">$45.00 →</span>
+                            </button>
+
+                            <button onclick="triggerSimulatedScan(2)" class="w-full bg-slatecard hover:bg-slate-800/90 border border-slateborder rounded-2xl p-3.5 flex items-center justify-between text-left transition">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-9 h-9 rounded-xl bg-sky-500/15 text-sky-400 flex items-center justify-center">
+                                        <i class="fa-solid fa-file-invoice-dollar text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-white">ConEdison Electric Bill</div>
+                                        <div class="text-[11px] text-slate-400">Utility Invoice · Bills</div>
+                                    </div>
+                                </div>
+                                <span class="text-xs font-bold text-indigo-400 money-val">$84.00 →</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUB-MODE B: MY QR CODE -->
+                <div id="scan-sub-myqr" class="hidden space-y-5">
+                    <div class="bg-gradient-to-b from-slatecard to-[#10141D] border border-slateborder rounded-[32px] p-6 flex flex-col items-center text-center shadow-xl">
+                        <div class="w-14 h-14 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 p-0.5 mb-3">
+                            <div class="w-full h-full rounded-full bg-obsidian flex items-center justify-center font-display font-bold text-lg text-white">AM</div>
+                        </div>
+                        <h3 id="myqr-name" class="text-base font-bold text-white">Alex Morgan</h3>
+                        <p id="myqr-handle" class="text-xs text-indigo-400 font-medium mt-0.5">@alex.morgan</p>
+
+                        <!-- Dynamic Request Badge if set -->
+                        <div id="myqr-request-pill" class="hidden mt-3 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emeraldFintech text-xs font-bold">
+                            Requesting: <span id="myqr-request-val">$0.00</span>
+                        </div>
+
+                        <!-- Crisp Custom SVG QR Code -->
+                        <div class="my-5 p-4 bg-white rounded-3xl shadow-lg">
+                            <svg id="personal-qr-svg" class="w-44 h-44 text-obsidian" viewBox="0 0 120 120" fill="currentColor">
+                                <!-- Top-Left Finder -->
+                                <path d="M10 10h30v30H10V10zm5 5v20h20V15H15zm5 5h10v10H20V20z"/>
+                                <!-- Top-Right Finder -->
+                                <path d="M80 10h30v30H80V10zm5 5v20h20V15H85zm5 5h10v10H90V20z"/>
+                                <!-- Bottom-Left Finder -->
+                                <path d="M10 80h30v30H10V80zm5 5v20h20V85H15zm5 5h10v10H20V90z"/>
+                                <!-- Data Matrix Modules -->
+                                <rect x="48" y="12" width="6" height="6"/><rect x="60" y="12" width="6" height="12"/><rect x="48" y="24" width="6" height="6"/>
+                                <rect x="12" y="48" width="12" height="6"/><rect x="30" y="48" width="6" height="12"/><rect x="12" y="62" width="6" height="6"/>
+                                <rect x="48" y="48" width="24" height="24" rx="4" fill="#6366F1"/>
+                                <circle cx="60" cy="60" r="5" fill="#FFFFFF"/>
+                                <rect x="80" y="48" width="6" height="12"/><rect x="92" y="48" width="18" height="6"/><rect x="86" y="64" width="12" height="6"/>
+                                <rect x="48" y="80" width="6" height="18"/><rect x="60" y="86" width="12" height="6"/><rect x="48" y="104" width="18" height="6"/>
+                                <rect x="80" y="80" width="12" height="6"/><rect x="98" y="80" width="12" height="12"/><rect x="80" y="96" width="6" height="14"/><rect x="92" y="100" width="18" height="10"/>
+                            </svg>
+                        </div>
+
+                        <p class="text-[11px] text-slate-400 max-w-[230px]">Scan with Obsidian Pay, Apple Cash, or any instant bank QR app</p>
+                    </div>
+
+                    <!-- My QR Action Buttons -->
+                    <div class="grid grid-cols-3 gap-2.5">
+                        <button onclick="openRequestAmountModal()" class="bg-slatecard border border-slateborder hover:border-slate-600 rounded-2xl py-3 px-2 flex flex-col items-center space-y-1.5 text-xs font-semibold text-white transition">
+                            <i class="fa-solid fa-tag text-emeraldFintech"></i>
+                            <span>Set Amount</span>
+                        </button>
+                        <button onclick="copyPaymentLink()" class="bg-slatecard border border-slateborder hover:border-slate-600 rounded-2xl py-3 px-2 flex flex-col items-center space-y-1.5 text-xs font-semibold text-white transition">
+                            <i class="fa-solid fa-link text-indigo-400"></i>
+                            <span>Copy Link</span>
+                        </button>
+                        <button onclick="showToast('High-res QR saved to Photos')" class="bg-slatecard border border-slateborder hover:border-slate-600 rounded-2xl py-3 px-2 flex flex-col items-center space-y-1.5 text-xs font-semibold text-white transition">
+                            <i class="fa-solid fa-share-nodes text-sky-400"></i>
+                            <span>Share QR</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 TAB 4: PROFILE & SETTINGS VIEW (WORKABLE)
+            =========================================== -->
+            <section id="tab-profile" class="hidden px-5 pt-2 space-y-5">
+                <!-- Profile Header Card -->
+                <div class="bg-slatecard border border-slateborder rounded-3xl p-5 flex items-center justify-between">
+                    <div class="flex items-center space-x-3.5">
+                        <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-violet-600 to-fuchsia-500 flex items-center justify-center font-display font-extrabold text-xl text-white shadow-lg">
+                            AM
+                        </div>
+                        <div>
+                            <div class="flex items-center space-x-1.5">
+                                <h2 id="profile-display-name" class="text-base font-bold text-white">Alex Morgan</h2>
+                                <i class="fa-solid fa-circle-check text-sky-400 text-xs" title="KYC Identity Verified"></i>
+                            </div>
+                            <p id="profile-display-email" class="text-xs text-slate-400 mt-0.5">alex.morgan@obsidianpay.io</p>
+                            <div class="flex items-center space-x-2 mt-1.5">
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emeraldFintech border border-emerald-500/20">KYC Verified</span>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amberFintech border border-amber-500/20">Metal Plus</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="openEditProfileModal()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slateborder text-slate-300 flex items-center justify-center transition">
+                        <i class="fa-solid fa-pen text-xs"></i>
+                    </button>
+                </div>
+
+                <!-- Security & Privacy Group -->
+                <div>
+                    <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2.5 px-1">Security & Privacy</h3>
+                    <div class="bg-slatecard border border-slateborder rounded-3xl divide-y divide-slateborder">
+                        <!-- Hide Balances Toggle -->
+                        <div class="p-4 flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-9 h-9 rounded-xl bg-indigo-500/15 text-indigo-400 flex items-center justify-center">
+                                    <i class="fa-solid fa-eye-slash text-xs"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-white">Hide Balances</div>
+                                    <div class="text-[11px] text-slate-400">Mask monetary values across app</div>
+                                </div>
+                            </div>
+                            <button onclick="togglePrivacyMode()" id="toggle-privacy-switch" class="w-11 h-6 rounded-full bg-slate-700 p-0.5 transition-colors duration-200 flex items-center">
+                                <span class="w-5 h-5 rounded-full bg-white shadow transform transition-transform duration-200 translate-x-0"></span>
+                            </button>
+                        </div>
+
+                        <!-- Biometric FaceID Toggle -->
+                        <div class="p-4 flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-9 h-9 rounded-xl bg-emerald-500/15 text-emeraldFintech flex items-center justify-center">
+                                    <i class="fa-solid fa-fingerprint text-sm"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-white">Biometric FaceID</div>
+                                    <div class="text-[11px] text-slate-400">Require FaceID for transfers</div>
+                                </div>
+                            </div>
+                            <button onclick="toggleGenericSwitch(this, 'Biometric FaceID')" class="w-11 h-6 rounded-full bg-indigo-600 p-0.5 transition-colors duration-200 flex items-center">
+                                <span class="w-5 h-5 rounded-full bg-white shadow transform transition-transform duration-200 translate-x-5"></span>
+                            </button>
+                        </div>
+
+                        <!-- Change App PIN -->
+                        <button onclick="openChangePinModal()" class="w-full p-4 flex items-center justify-between text-left hover:bg-slate-800/40 transition">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-9 h-9 rounded-xl bg-amber-500/15 text-amberFintech flex items-center justify-center">
+                                    <i class="fa-solid fa-key text-xs"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-white">Change Security PIN</div>
+                                    <div class="text-[11px] text-slate-400">4-digit vault passcode</div>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
+                        </button>
+
+                        <!-- Active Devices -->
+                        <button onclick="openDevicesModal()" class="w-full p-4 flex items-center justify-between text-left hover:bg-slate-800/40 transition">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-9 h-9 rounded-xl bg-sky-500/15 text-sky-400 flex items-center justify-center">
+                                    <i class="fa-solid fa-mobile-screen text-xs"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-white">Active Devices</div>
+                                    <div class="text-[11px] text-slate-400">iPhone 16 Pro · MacBook Air</div>
+                                </div>
+                            </div>
+                            <span class="text-[11px] font-semibold text-emeraldFintech">2 Active</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Preferences & Multi-Currency -->
+                <div>
+                    <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2.5 px-1">Preferences</h3>
+                    <div class="bg-slatecard border border-slateborder rounded-3xl divide-y divide-slateborder">
+                        <!-- Primary Currency Selector -->
+                        <div class="p-4 flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-9 h-9 rounded-xl bg-violet-500/15 text-violet-400 flex items-center justify-center">
+                                    <i class="fa-solid fa-coins text-xs"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-white">Display Currency</div>
+                                    <div class="text-[11px] text-slate-400">Live FX conversion across app</div>
+                                </div>
+                            </div>
+                            <select id="currency-selector" onchange="changeCurrency(this.value)" class="bg-obsidian border border-slateborder text-white text-xs font-bold rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
+                                <option value="USD">USD ($)</option>
+                                <option value="EUR">EUR (€)</option>
+                                <option value="GBP">GBP (£)</option>
+                                <option value="NPR">NPR (रू)</option>
+                            </select>
+                        </div>
+
+                        <!-- Push Notifications -->
+                        <div class="p-4 flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-9 h-9 rounded-xl bg-rose-500/15 text-roseFintech flex items-center justify-center">
+                                    <i class="fa-solid fa-bell text-xs"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-white">Instant Spend Alerts</div>
+                                    <div class="text-[11px] text-slate-400">Real-time push notifications</div>
+                                </div>
+                            </div>
+                            <button onclick="toggleGenericSwitch(this, 'Push Notifications')" class="w-11 h-6 rounded-full bg-indigo-600 p-0.5 transition-colors duration-200 flex items-center">
+                                <span class="w-5 h-5 rounded-full bg-white shadow transform transition-transform duration-200 translate-x-5"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Linked Accounts & Statements -->
+                <div>
+                    <div class="flex items-center justify-between mb-2.5 px-1">
+                        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Demo Linked Accounts</h3>
+                        <button onclick="openLinkBankModal()" class="text-xs font-bold text-indigo-400 hover:text-indigo-300">+ Link Bank</button>
+                    </div>
+                    <div class="bg-slatecard border border-slateborder rounded-3xl divide-y divide-slateborder">
+                        <div id="linked-banks-list" class="divide-y divide-slateborder">
+                            <!-- Populated dynamically -->
+                        </div>
+                        <button onclick="exportMonthlyStatement()" class="w-full p-4 flex items-center justify-center space-x-2 text-xs font-bold text-indigo-400 hover:bg-slate-800/40 transition">
+                            <i class="fa-solid fa-file-csv text-sm"></i>
+                            <span>Export Monthly Statement (CSV)</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- ==========================================
+             UNIFIED GLASSMORPHIC BOTTOM NAVIGATION BAR
+        =========================================== -->
+        <nav class="absolute bottom-0 inset-x-0 bg-obsidian/85 backdrop-blur-xl border-t border-slateborder px-6 py-3 flex items-center justify-between z-30">
+            <button onclick="switchTab('wallet')" id="nav-wallet" class="flex flex-col items-center space-y-1 text-indigo-400 transition">
+                <i class="fa-solid fa-wallet text-lg"></i>
+                <span class="text-[10px] font-bold tracking-wide">Wallet</span>
+            </button>
+            <button onclick="switchTab('analytics')" id="nav-analytics" class="flex flex-col items-center space-y-1 text-slate-500 hover:text-slate-300 transition">
+                <i class="fa-solid fa-chart-pie text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-wide">Analytics</span>
+            </button>
+            <button onclick="switchTab('scan')" id="nav-scan" class="flex flex-col items-center space-y-1 text-slate-500 hover:text-slate-300 transition">
+                <div class="w-11 h-11 -mt-5 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/40 border-4 border-obsidian">
+                    <i class="fa-solid fa-qrcode text-base"></i>
+                </div>
+                <span class="text-[10px] font-semibold tracking-wide">Scan</span>
+            </button>
+            <button onclick="switchTab('profile')" id="nav-profile" class="flex flex-col items-center space-y-1 text-slate-500 hover:text-slate-300 transition">
+                <i class="fa-solid fa-user-shield text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-wide">Profile</span>
+            </button>
+        </nav>
+
+        <!-- ==========================================
+             SLIDE-UP INTERACTIVE MODAL SHEET
+        =========================================== -->
+        <div id="modal-backdrop" onclick="closeModal()" class="hidden absolute inset-0 bg-black/70 backdrop-blur-sm z-40 transition-opacity"></div>
+        <div id="modal-sheet" class="hidden absolute bottom-0 inset-x-0 bg-slatecard border-t border-slateborder rounded-t-[36px] p-6 z-50 transform transition-transform duration-300 max-h-[85%] overflow-y-auto">
+            <div class="w-10 h-1 bg-slate-700 rounded-full mx-auto mb-5"></div>
+            <div id="modal-content">
+                <!-- Dynamic Modal Content -->
+            </div>
+        </div>
+
+        <!-- Toast Notification Pill -->
+        <div id="toast" class="absolute top-16 left-1/2 -translate-x-1/2 bg-slate-900/95 border border-slateborder text-white px-4 py-2.5 rounded-2xl text-xs font-semibold shadow-2xl opacity-0 pointer-events-none transition-all duration-300 z-50 flex items-center space-x-2 whitespace-nowrap">
+            <i class="fa-solid fa-circle-check text-emeraldFintech"></i>
+            <span id="toast-msg">Action completed</span>
+        </div>
+
+    </div>
+
+    <!-- ==========================================
+         APPLICATION STATE & INTERACTIVE LOGIC
+    =========================================== -->
+    <script>
+        // 1. MULTI-CURRENCY CONFIGURATION
+        const currencies = {
+            USD: { symbol: '$', rate: 1, decimals: 2 },
+            EUR: { symbol: '€', rate: 0.92, decimals: 2 },
+            GBP: { symbol: '£', rate: 0.79, decimals: 2 },
+            NPR: { symbol: 'रू ', rate: 134.5, decimals: 0 }
+        };
+
+        // 2. CENTRALIZED APPLICATION STATE (Persists across tabs)
+        const state = {
+            activeTab: 'wallet',
+            currency: 'USD',
+            privacyMode: false,
+            revealCardDetails: false,
+            activeCardIndex: 0,
+            filterHomeTxByActiveCard: false,
+            budgetLimitUSD: 3000,
+            analyticsTimeframe: 'Month',
+            selectedCategoryFilter: null,
+            qrRequestAmountUSD: 0,
+            flashlightOn: false,
+            user: {
+                name: 'Alex Morgan',
+                email: 'alex.morgan@obsidianpay.io',
+                phone: '+1 (415) 890-4312',
+                handle: '@alex.morgan'
+            },
+            cards: [
+                {
+                    id: 'card-1',
+                    name: 'Platinum Debit',
+                    holder: 'ALEX MORGAN',
+                    network: 'VISA',
+                    last4: '4829',
+                    fullNumber: '4532  8910  3341  4829',
+                    expiry: '09/29',
+                    cvv: '842',
+                    balanceUSD: 11240.00,
+                    monthlyLimitUSD: 15000,
+                    frozen: false,
+                    gradient: 'from-slate-800 via-slate-900 to-black border-slate-700'
+                },
+                {
+                    id: 'card-2',
+                    name: 'Gold Rewards',
+                    holder: 'ALEX MORGAN',
+                    network: 'MASTERCARD',
+                    last4: '9104',
+                    fullNumber: '5412  7500  1928  9104',
+                    expiry: '11/28',
+                    cvv: '319',
+                    balanceUSD: 4860.00,
+                    monthlyLimitUSD: 8000,
+                    frozen: false,
+                    gradient: 'from-amber-600/90 via-yellow-700/90 to-stone-900 border-amber-500/40'
+                },
+                {
+                    id: 'card-3',
+                    name: 'Virtual USD',
+                    holder: 'ALEX MORGAN',
+                    network: 'VISA',
+                    last4: '7731',
+                    fullNumber: '4916  3029  8841  7731',
+                    expiry: '04/30',
+                    cvv: '905',
+                    balanceUSD: 2350.00,
+                    monthlyLimitUSD: 5000,
+                    frozen: false,
+                    gradient: 'from-indigo-600 via-violet-700 to-slate-950 border-indigo-400/40'
+                }
+            ],
+            savingsGoals: [
+                { id: 'goal-1', title: 'Emergency Reserve', savedUSD: 4200, targetUSD: 6000, icon: 'fa-shield-heart', color: 'text-emeraldFintech bg-emerald-500/15', bar: 'bg-emeraldFintech' },
+                { id: 'goal-2', title: 'Tokyo & Kyoto Trip', savedUSD: 1850, targetUSD: 3500, icon: 'fa-torii-gate', color: 'text-indigo-400 bg-indigo-500/15', bar: 'bg-indigo-500' },
+                { id: 'goal-3', title: 'Mac Studio Upgrade', savedUSD: 1400, targetUSD: 2500, icon: 'fa-laptop-code', color: 'text-amberFintech bg-amber-500/15', bar: 'bg-amberFintech' }
+            ],
+            linkedBanks: [
+                { name: 'Sample Checking Account', mask: '•••• 0000', status: 'Demo only · Not connected' },
+                { name: 'Sample Savings Account', mask: '•••• 0000', status: 'Demo only · Not connected' }
+            ],
+            transactions: [
+                { id: 'tx-1', cardId: 'card-1', title: 'Apple Store Fifth Ave', category: 'Shopping', amountUSD: -249.00, date: 'Today, 2:14 PM', icon: 'fa-bag-shopping', color: 'text-indigo-400 bg-indigo-500/15' },
+                { id: 'tx-2', cardId: 'card-1', title: 'Stripe Payroll Deposit', category: 'Income', amountUSD: 3450.00, date: 'Yesterday', icon: 'fa-arrow-down', color: 'text-emeraldFintech bg-emerald-500/15' },
+                { id: 'tx-3', cardId: 'card-2', title: 'Sweetgreen Salad', category: 'Food & Dining', amountUSD: -18.40, date: 'Nov 11', icon: 'fa-utensils', color: 'text-amberFintech bg-amber-500/15' },
+                { id: 'tx-4', cardId: 'card-2', title: 'Delta Air Lines', category: 'Travel', amountUSD: -420.00, date: 'Nov 09', icon: 'fa-plane', color: 'text-sky-400 bg-sky-500/15' },
+                { id: 'tx-5', cardId: 'card-3', title: 'Spotify Duo Plan', category: 'Subscriptions', amountUSD: -16.99, date: 'Nov 06', icon: 'fa-music', color: 'text-purple-400 bg-purple-500/15' },
+                { id: 'tx-6', cardId: 'card-1', title: 'Fiber Gigabit Internet', category: 'Bills', amountUSD: -79.99, date: 'Nov 03', icon: 'fa-wifi', color: 'text-roseFintech bg-rose-500/15' }
+            ]
+        };
+
+        // NEPAL BANK OFFLINE TRACKER — no bank API, credentials, or network calls.
+        // Data is stored in this browser's localStorage. Do not use on shared/public devices.
+        const NB_STORAGE_KEY = 'obsidianpay_nepalbank_tracker_v1';
+        let nbData = { balance: 0, updatedAt: null, transactions: [] };
+        try {
+            const savedNB = JSON.parse(localStorage.getItem(NB_STORAGE_KEY) || 'null');
+            if (savedNB && typeof savedNB.balance === 'number' && Array.isArray(savedNB.transactions)) nbData = savedNB;
+        } catch (e) { console.warn('Nepal Bank local data could not be loaded.'); }
+        function nbSave() {
+            try { localStorage.setItem(NB_STORAGE_KEY, JSON.stringify(nbData)); }
+            catch (e) { showToast('Could not save locally. Check browser storage.'); }
+            nbRender();
+        }
+        function nbMoney(value) {
+            return 'रू ' + Number(value || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+        }
+        function nbRender() {
+            const bal = document.getElementById('nb-balance');
+            if (!bal) return;
+            bal.textContent = nbMoney(nbData.balance);
+            document.getElementById('nb-updated').textContent = nbData.updatedAt ? 'Last updated locally: ' + new Date(nbData.updatedAt).toLocaleString() : 'No balance entered yet';
+            document.getElementById('nb-tx-count').textContent = nbData.transactions.length + ' records';
+            const list = document.getElementById('nb-transactions');
+            if (!nbData.transactions.length) {
+                list.innerHTML = '<p class="text-[11px] text-slate-500">No imported or manually added transactions yet.</p>';
+                return;
+            }
+            list.innerHTML = nbData.transactions.slice(0, 8).map(t => {
+                const amount = Number(t.amount || 0), incoming = t.type === 'credit';
+                const safeTitle = String(t.description || 'Transaction').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+                return `<div class="flex items-center justify-between gap-2 py-1.5"><div class="min-w-0"><p class="text-[11px] text-slate-200 truncate">${safeTitle}</p><p class="text-[9px] text-slate-500">${String(t.date || '').replace(/[<>]/g,'')}</p></div><span class="text-[11px] font-bold whitespace-nowrap ${incoming ? 'text-emerald-400' : 'text-rose-400'}">${incoming ? '+' : '−'}${nbMoney(amount)}</span></div>`;
+            }).join('');
+        }
+        function nbOpenBalanceEditor() {
+            openModal(`<div class="space-y-4"><div><h3 class="text-lg font-bold text-white">Update Nepal Bank balance</h3><p class="text-xs text-slate-400 mt-1">Enter the balance shown in your official bank app or statement.</p></div><label class="block text-xs text-slate-300">Current balance (NPR)<input id="nb-balance-input" type="number" min="0" step="0.01" value="${Number(nbData.balance).toFixed(2)}" class="mt-2 w-full rounded-xl bg-[#0B0E14] border border-slateborder p-3 text-white" /></label><div class="flex gap-2"><button onclick="closeModal()" class="flex-1 rounded-xl bg-slate-800 py-3 text-white text-sm">Cancel</button><button onclick="nbSaveBalance()" class="flex-1 rounded-xl bg-indigo-600 py-3 text-white text-sm font-bold">Save balance</button></div></div>`);
+        }
+        function nbSaveBalance() {
+            const value = Number(document.getElementById('nb-balance-input')?.value);
+            if (!Number.isFinite(value) || value < 0) return showToast('Enter a valid non-negative balance.');
+            nbData.balance = value; nbData.updatedAt = new Date().toISOString(); nbSave(); closeModal(); showToast('Balance saved on this device.');
+        }
+        function nbOpenTransactionEditor() {
+            openModal(`<div class="space-y-3"><div><h3 class="text-lg font-bold text-white">Add bank transaction</h3><p class="text-xs text-slate-400">Record a transaction from your Nepal Bank statement.</p></div><label class="block text-xs text-slate-300">Description<input id="nb-tx-desc" maxlength="100" placeholder="e.g. Salary deposit" class="mt-1 w-full rounded-xl bg-[#0B0E14] border border-slateborder p-3 text-white" /></label><div class="grid grid-cols-2 gap-2"><label class="block text-xs text-slate-300">Type<select id="nb-tx-type" class="mt-1 w-full rounded-xl bg-[#0B0E14] border border-slateborder p-3 text-white"><option value="debit">Debit / expense</option><option value="credit">Credit / income</option></select></label><label class="block text-xs text-slate-300">Amount (NPR)<input id="nb-tx-amount" type="number" min="0.01" step="0.01" placeholder="0.00" class="mt-1 w-full rounded-xl bg-[#0B0E14] border border-slateborder p-3 text-white" /></label></div><label class="block text-xs text-slate-300">Date<input id="nb-tx-date" type="date" value="${new Date().toISOString().slice(0,10)}" class="mt-1 w-full rounded-xl bg-[#0B0E14] border border-slateborder p-3 text-white" /></label><div class="flex gap-2"><button onclick="closeModal()" class="flex-1 rounded-xl bg-slate-800 py-3 text-white text-sm">Cancel</button><button onclick="nbSaveTransaction()" class="flex-1 rounded-xl bg-indigo-600 py-3 text-white text-sm font-bold">Save transaction</button></div></div>`);
+        }
+        function nbSaveTransaction() {
+            const description = document.getElementById('nb-tx-desc')?.value.trim();
+            const amount = Number(document.getElementById('nb-tx-amount')?.value);
+            const type = document.getElementById('nb-tx-type')?.value;
+            const date = document.getElementById('nb-tx-date')?.value;
+            if (!description || !Number.isFinite(amount) || amount <= 0 || !date) return showToast('Complete all transaction fields correctly.');
+            nbData.transactions.unshift({id:'nb-'+Date.now(), description, amount, type, date, source:'manual'});
+            nbData.balance = Math.max(0, nbData.balance + (type === 'credit' ? amount : -amount));
+            nbData.updatedAt = new Date().toISOString(); nbSave(); closeModal(); showToast('Transaction recorded locally.');
+        }
+        function nbParseCSV(text) {
+            const rows=[]; let row=[], cell='', quoted=false;
+            for (let i=0;i<text.length;i++) { const c=text[i]; if(c==='"' && quoted && text[i+1]==='"'){cell+='"';i++;} else if(c==='"'){quoted=!quoted;} else if(c===',' && !quoted){row.push(cell);cell='';} else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell);if(row.some(x=>x.trim()))rows.push(row);row=[];cell='';} else cell+=c; }
+            row.push(cell); if(row.some(x=>x.trim())) rows.push(row); return rows;
+        }
+        async function nbImportCSV(event) {
+            const file = event.target.files?.[0]; if(!file) return;
+            try {
+                const rows=nbParseCSV(await file.text()); if(rows.length<2) throw new Error('CSV has no transaction rows.');
+                const headers=rows[0].map(h=>h.trim().toLowerCase());
+                const pick=(r,names)=>{const i=headers.findIndex(h=>names.includes(h));return i>=0?(r[i]||'').trim():'';};
+                const imported=[];
+                for(const r of rows.slice(1)) {
+                    const description=pick(r,['description','details','narration','particulars','remarks','transaction']);
+                    const date=pick(r,['date','transaction date','value date']);
+                    const debit=Number(pick(r,['debit','withdrawal','withdrawals','dr']).replace(/[, ]/g,''))||0;
+                    const credit=Number(pick(r,['credit','deposit','deposits','cr']).replace(/[, ]/g,''))||0;
+                    if(!description || (!debit && !credit)) continue;
+                    imported.push({id:'nb-'+Date.now()+'-'+imported.length,description,amount:debit||credit,type:credit>0?'credit':'debit',date,source:'csv'});
+                }
+                if(!imported.length) throw new Error('No rows found. Expected Date, Description, Debit and Credit columns.');
+                const existing=new Set(nbData.transactions.map(t=>[t.date,t.description,t.amount,t.type].join('|')));
+                const fresh=imported.filter(t=>!existing.has([t.date,t.description,t.amount,t.type].join('|')));
+                nbData.transactions=[...fresh,...nbData.transactions];
+                // If CSV has a closing/current balance column, use its final numeric value.
+                const balanceIndex=headers.findIndex(h=>['balance','closing balance','available balance'].includes(h));
+                if(balanceIndex>=0){for(let i=rows.length-1;i>0;i--){const v=Number((rows[i][balanceIndex]||'').replace(/[ ,]/g,''));if(Number.isFinite(v)&&rows[i][balanceIndex].trim()!==''){nbData.balance=v;break;}}}
+                nbData.updatedAt=new Date().toISOString(); nbSave(); showToast(`${fresh.length} new transactions imported.`);
+            } catch(err){showToast(err.message||'Could not import CSV.');}
+            event.target.value='';
+        }
+        function nbExportCSV() {
+            const lines=[['Date','Description','Type','Amount (NPR)'],...nbData.transactions.map(t=>[t.date,t.description,t.type,t.amount])];
+            const csv=lines.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
+            const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'})); const a=document.createElement('a');a.href=url;a.download='nepal-bank-transactions.csv';a.click();URL.revokeObjectURL(url);
+        }
+
+        const cardThemes = [
+            { id: 'obsidian', label: 'Obsidian', gradient: 'from-slate-800 via-slate-900 to-black border-slate-700', swatch: 'bg-slate-800' },
+            { id: 'royal', label: 'Royal Indigo', gradient: 'from-indigo-600 via-violet-700 to-slate-950 border-indigo-400/40', swatch: 'bg-indigo-600' },
+            { id: 'emerald', label: 'Emerald Vault', gradient: 'from-emerald-600 via-teal-800 to-slate-950 border-emerald-400/40', swatch: 'bg-emerald-600' },
+            { id: 'crimson', label: 'Crimson Metal', gradient: 'from-rose-600 via-red-800 to-slate-950 border-rose-400/40', swatch: 'bg-rose-600' },
+            { id: 'gold', label: 'Amber Gold', gradient: 'from-amber-600/90 via-yellow-700/90 to-stone-900 border-amber-500/40', swatch: 'bg-amber-600' }
+        ];
+        let selectedNewCardTheme = cardThemes[1];
+
+        // Helper: Format USD amounts into the currently selected display currency
+        function formatMoney(amountUSD, showSign = false) {
+            const cfg = currencies[state.currency] || currencies.USD;
+            const converted = Math.abs(amountUSD) * cfg.rate;
+            const formatted = converted.toLocaleString('en-US', {
+                minimumFractionDigits: cfg.decimals,
+                maximumFractionDigits: cfg.decimals
+            });
+            const sign = amountUSD < 0 ? '-' : (showSign && amountUSD > 0 ? '+' : '');
+            return `${sign}${cfg.symbol}${formatted}`;
+        }
+
+        // Helper: Apply privacy blur if active
+        function syncPrivacyClasses() {
+            document.querySelectorAll('.money-val').forEach(el => {
+                if (state.privacyMode) {
+                    el.classList.add('privacy-masked');
+                } else {
+                    el.classList.remove('privacy-masked');
+                }
+            });
+        }
+
+        // ==========================================
+        // NAVIGATION CONTROLLER
+        // ==========================================
+        function switchTab(tabName, subMode = null) {
+            state.activeTab = tabName;
+            const tabs = ['wallet', 'analytics', 'scan', 'profile'];
+            tabs.forEach(t => {
+                const sec = document.getElementById(`tab-${t}`);
+                const nav = document.getElementById(`nav-${t}`);
+                if (t === tabName) {
+                    sec.classList.remove('hidden');
+                    if (t !== 'scan') {
+                        nav.classList.remove('text-slate-500');
+                        nav.classList.add('text-indigo-400');
+                    }
+                } else {
+                    sec.classList.add('hidden');
+                    if (t !== 'scan') {
+                        nav.classList.add('text-slate-500');
+                        nav.classList.remove('text-indigo-400');
+                    }
+                }
+            });
+
+            if (tabName === 'wallet') renderWalletTab();
+            if (tabName === 'analytics') renderAnalyticsTab();
+            if (tabName === 'scan' && subMode) setScanSubMode(subMode);
+            if (tabName === 'profile') renderProfileTab();
+            const mainEl = document.getElementById('main-viewport');
+            if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+            syncPrivacyClasses();
+        }
+
+        // ==========================================
+        // TAB 1: HOME / WALLET RENDER & SLIDEABLE CARDS
+        // ==========================================
+        let isProgrammaticCarouselScroll = false;
+
+        function renderWalletTab(scrollToActive = false) {
+            if (state.activeCardIndex >= state.cards.length) {
+                state.activeCardIndex = Math.max(0, state.cards.length - 1);
+            }
+
+            // Total Balance across all cards
+            const totalUSD = state.cards.reduce((acc, c) => acc + c.balanceUSD, 0);
+            document.getElementById('total-net-balance').innerText = formatMoney(totalUSD);
+            document.getElementById('card-count-badge').innerText = state.cards.length;
+
+            // Render Cards Carousel
+            const carousel = document.getElementById('cards-carousel');
+            const dots = document.getElementById('card-dots');
+            carousel.innerHTML = '';
+            dots.innerHTML = '';
+
+            state.cards.forEach((card, idx) => {
+                const isFrozen = card.frozen;
+                const isActive = idx === state.activeCardIndex;
+                const cardEl = document.createElement('div');
+                cardEl.dataset.cardIndex = idx;
+                cardEl.className = `card-slide card-shimmer snap-center shrink-0 w-[86%] rounded-[28px] p-5 bg-gradient-to-br ${card.gradient} border relative overflow-hidden select-none ${isActive ? 'scale-100 opacity-100 ring-2 ring-indigo-500/75 shadow-xl shadow-black/50' : 'scale-[0.95] opacity-70 hover:opacity-90'}`;
+                cardEl.onclick = () => {
+                    if (!carousel.dataset.wasDragged) {
+                        selectCardAtIndex(idx, true);
+                    }
+                };
+
+                const numDisplay = state.revealCardDetails ? card.fullNumber : `••••  ••••  ••••  ${card.last4}`;
+                const cvvDisplay = state.revealCardDetails ? card.cvv : '•••';
+
+                cardEl.innerHTML = `
+                    ${isFrozen ? `<div class="absolute inset-0 bg-sky-950/75 backdrop-blur-[2px] flex flex-col items-center justify-center z-10">
+                        <i class="fa-solid fa-snowflake text-2xl text-sky-300 mb-1.5"></i>
+                        <span class="text-xs font-bold uppercase tracking-widest text-sky-200">Card Frozen</span>
+                    </div>` : ''}
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-white/90">${card.name}</span>
+                            <button onclick="event.stopPropagation(); copyCardNumberDirect(${idx})" title="Copy Card Number" class="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 flex items-center justify-center transition">
+                                <i class="fa-regular fa-copy text-[10px]"></i>
+                            </button>
+                        </div>
+                        <span class="text-xs font-extrabold italic tracking-widest text-white">${card.network}</span>
+                    </div>
+                    <div class="my-4">
+                        <div class="text-[11px] text-white/60">Available Balance</div>
+                        <div class="text-2xl font-display font-extrabold text-white mt-0.5 money-val">${formatMoney(card.balanceUSD)}</div>
+                    </div>
+                    <div class="flex items-end justify-between text-xs">
+                        <div>
+                            <div class="font-mono tracking-wider text-white/95 text-[13px]">${numDisplay}</div>
+                            <div class="text-[10px] text-white/65 mt-1 uppercase tracking-wide">${card.holder || state.user.name} · EXP ${card.expiry} · CVV ${cvvDisplay}</div>
+                        </div>
+                        <i class="fa-solid fa-wifi rotate-90 text-white/60 text-sm"></i>
+                    </div>
+                `;
+                carousel.appendChild(cardEl);
+
+                // Dot indicator
+                const dot = document.createElement('button');
+                dot.className = `h-1.5 rounded-full transition-all duration-300 ${isActive ? 'w-5 bg-indigo-500' : 'w-1.5 bg-slate-700 hover:bg-slate-500'}`;
+                dot.onclick = () => selectCardAtIndex(idx, true);
+                dots.appendChild(dot);
+            });
+
+            // Append "+ Add New Card" Slide Slot at the end of the carousel
+            const addSlot = document.createElement('div');
+            addSlot.className = 'snap-center shrink-0 w-[68%] rounded-[28px] p-5 bg-slatecard/50 hover:bg-slatecard border-2 border-dashed border-slateborder hover:border-indigo-500/60 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 min-h-[176px]';
+            addSlot.onclick = () => openAddCardModal();
+            addSlot.innerHTML = `
+                <div class="w-11 h-11 rounded-2xl bg-indigo-500/15 text-indigo-400 flex items-center justify-center mb-2.5">
+                    <i class="fa-solid fa-plus text-base"></i>
+                </div>
+                <div class="text-xs font-bold text-white">Add New Card</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">Virtual or physical debit</div>
+            `;
+            carousel.appendChild(addSlot);
+
+            // Update Freeze, Reveal & Active Label
+            const activeCard = state.cards[state.activeCardIndex];
+            if (activeCard) {
+                document.getElementById('freeze-label').innerText = activeCard.frozen ? 'Unfreeze' : 'Freeze';
+                document.getElementById('reveal-label').innerText = state.revealCardDetails ? 'Hide' : 'Details';
+                document.getElementById('active-card-indicator-label').innerText = `Selected: ${activeCard.name} (••${activeCard.last4})`;
+            }
+
+            if (scrollToActive) {
+                scrollCarouselToCard(state.activeCardIndex);
+            }
+
+            renderSavingsGoals();
+            renderHomeTransactions();
+            syncPrivacyClasses();
+        }
+
+        function copyCardNumberDirect(idx) {
+            const card = state.cards[idx];
+            if (!card) return;
+            const temp = document.createElement('textarea');
+            temp.value = card.fullNumber.replace(/\s+/g, '');
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            showToast(`Copied ${card.name} (••${card.last4})`);
+        }
+
+        function renderSavingsGoals() {
+            const track = document.getElementById('savings-goals-track');
+            if (!track) return;
+            track.innerHTML = '';
+            state.savingsGoals.forEach((goal, idx) => {
+                const pct = Math.min(100, Math.round((goal.savedUSD / goal.targetUSD) * 100));
+                const card = document.createElement('div');
+                card.onclick = () => openGoalDepositModal(idx);
+                card.className = 'shrink-0 w-[185px] bg-slatecard border border-slateborder hover:border-slate-600 rounded-2xl p-3.5 cursor-pointer transition active:scale-95';
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-2.5">
+                        <div class="w-8 h-8 rounded-xl ${goal.color} flex items-center justify-center">
+                            <i class="fa-solid ${goal.icon} text-xs"></i>
+                        </div>
+                        <span class="text-[11px] font-bold text-slate-300">${pct}%</span>
+                    </div>
+                    <div class="text-xs font-bold text-white truncate">${goal.title}</div>
+                    <div class="text-[11px] text-slate-400 mt-0.5 money-val">${formatMoney(goal.savedUSD)} / ${formatMoney(goal.targetUSD)}</div>
+                    <div class="w-full h-1.5 bg-obsidian rounded-full overflow-hidden mt-2.5">
+                        <div class="h-full ${goal.bar} rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+                    </div>
+                `;
+                track.appendChild(card);
+            });
+        }
+
+        function openGoalDepositModal(idx) {
+            const goal = state.savingsGoals[idx];
+            const card = state.cards[state.activeCardIndex];
+            openModal(`
+                <h3 class="text-lg font-display font-bold text-white mb-1">${goal.title}</h3>
+                <p class="text-xs text-slate-400 mb-4">Saved ${formatMoney(goal.savedUSD)} of ${formatMoney(goal.targetUSD)} target</p>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-400">Allocate from ${card.name} (USD)</label>
+                        <input id="goal-deposit-amt" type="number" value="150" min="5" class="w-full mt-1 bg-obsidian border border-slateborder rounded-xl px-3.5 py-2.5 text-lg font-bold text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <button onclick="executeGoalDeposit(${idx})" class="w-full py-3.5 rounded-2xl bg-emeraldFintech text-obsidian text-xs font-extrabold mt-2">
+                        Boost Savings Goal
+                    </button>
+                </div>
+            `);
+        }
+
+        function executeGoalDeposit(idx) {
+            const goal = state.savingsGoals[idx];
+            const card = state.cards[state.activeCardIndex];
+            const amt = parseFloat(document.getElementById('goal-deposit-amt').value);
+            if (card.frozen) { showToast('Unfreeze card first'); return; }
+            if (!amt || amt <= 0 || amt > card.balanceUSD) { showToast('Insufficient card balance'); return; }
+
+            card.balanceUSD -= amt;
+            goal.savedUSD += amt;
+            state.transactions.unshift({
+                id: 'tx-' + Date.now(),
+                cardId: card.id,
+                title: `Vault: ${goal.title}`,
+                category: 'Subscriptions',
+                amountUSD: -amt,
+                date: 'Just now',
+                icon: goal.icon,
+                color: goal.color
+            });
+            closeModal();
+            renderWalletTab();
+            showToast(`Added ${formatMoney(amt)} to ${goal.title}`);
+        }
+
+        function openCreateGoalModal() {
+            openModal(`
+                <h3 class="text-lg font-display font-bold text-white mb-1">Create Savings Goal</h3>
+                <p class="text-xs text-slate-400 mb-4">Automate personal wealth targets</p>
+                <div class="space-y-3">
+                    <input id="new-goal-title" type="text" placeholder="Goal Name (e.g. Home Downpayment)" class="w-full bg-obsidian border border-slateborder rounded-xl px-3.5 py-2.5 text-xs font-bold text-white">
+                    <input id="new-goal-target" type="number" placeholder="Target Amount (USD)" value="2000" class="w-full bg-obsidian border border-slateborder rounded-xl px-3.5 py-2.5 text-xs font-bold text-white">
+                    <button onclick="createNewSavingsGoal()" class="w-full py-3.5 rounded-2xl bg-indigo-600 text-white text-xs font-bold">Create Vault</button>
+                </div>
+            `);
+        }
+
+        function createNewSavingsGoal() {
+            const title = document.getElementById('new-goal-title').value.trim() || 'New Savings Goal';
+            const targetUSD = Math.max(50, parseFloat(document.getElementById('new-goal-target').value) || 1000);
+            state.savingsGoals.push({
+                id: 'goal-' + Date.now(),
+                title,
+                savedUSD: 0,
+                targetUSD,
+                icon: 'fa-piggy-bank',
+                color: 'text-sky-400 bg-sky-500/15',
+                bar: 'bg-sky-400'
+            });
+            closeModal();
+            renderSavingsGoals();
+            showToast(`${title} vault created`);
+        }
+
+        function openCardLimitModal() {
+            const card = state.cards[state.activeCardIndex];
+            const currentLimit = card.monthlyLimitUSD || 10000;
+            openModal(`
+                <h3 class="text-lg font-display font-bold text-white mb-1">${card.name} Controls</h3>
+                <p class="text-xs text-slate-400 mb-4">Configure monthly spending cap & security</p>
+                <div class="bg-obsidian border border-slateborder rounded-2xl p-4 mb-4">
+                    <div class="flex justify-between text-xs mb-2">
+                        <span class="text-slate-400">Monthly Spend Limit</span>
+                        <span id="card-limit-display" class="font-bold text-indigo-400">${formatMoney(currentLimit)}</span>
+                    </div>
+                    <input id="card-limit-slider" oninput="document.getElementById('card-limit-display').innerText = formatMoney(parseFloat(this.value))" type="range" min="500" max="25000" step="500" value="${currentLimit}" class="w-full accent-indigo-500 cursor-pointer">
+                </div>
+                <button onclick="saveCardLimit()" class="w-full py-3.5 rounded-2xl bg-indigo-600 text-white text-xs font-bold">Apply Card Limit</button>
+            `);
+        }
+
+        function saveCardLimit() {
+            const card = state.cards[state.activeCardIndex];
+            card.monthlyLimitUSD = parseFloat(document.getElementById('card-limit-slider').value);
+            closeModal();
+            showToast(`${card.name} limit set to ${formatMoney(card.monthlyLimitUSD)}`);
+        }
+
+        function openCardTransferModal() {
+            if (state.cards.length < 2) {
+                showToast('Add a second card to transfer between cards');
+                return;
+            }
+            const opts = state.cards.map((c, i) => `<option value="${i}">${c.name} (${formatMoney(c.balanceUSD)})</option>`).join('');
+            openModal(`
+                <h3 class="text-lg font-display font-bold text-white mb-1">Card-to-Card Transfer</h3>
+                <p class="text-xs text-slate-400 mb-4">Instant zero-fee internal balance rebalance</p>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-400">From Card</label>
+                        <select id="move-from-card" class="w-full mt-1 bg-obsidian border border-slateborder rounded-xl px-3 py-2.5 text-xs font-bold text-white">${opts}</select>
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-400">To Card</label>
+                        <select id="move-to-card" class="w-full mt-1 bg-obsidian border border-slateborder rounded-xl px-3 py-2.5 text-xs font-bold text-white">${opts}</select>
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-400">Amount (USD)</label>
+                        <input id="move-card-amt" type="number" value="250" min="1" class="w-full mt-1 bg-obsidian border border-slateborder rounded-xl px-3.5 py-2.5 text-lg font-bold text-white">
+                    </div>
+                    <button onclick="executeCardToCardTransfer()" class="w-full py-3.5 rounded-2xl bg-indigo-600 text-white text-xs font-bold mt-1">Transfer Instantly</button>
+                </div>
+            `);
+            document.getElementById('move-from-card').value = String(state.activeCardIndex);
+            document.getElementById('move-to-card').value = String((state.activeCardIndex + 1) % state.cards.length);
+        }
+
+        function executeCardToCardTransfer() {
+            const fromIdx = parseInt(document.getElementById('move-from-card').value);
+            const toIdx = parseInt(document.getElementById('move-to-card').value);
+            const amt = parseFloat(document.getElementById('move-card-amt').value);
+            if (fromIdx === toIdx) { showToast('Select two different cards'); return; }
+            const fromCard = state.cards[fromIdx];
+            const toCard = state.cards[toIdx];
+            if (fromCard.frozen || toCard.frozen) { showToast('Unfreeze cards before transferring'); return; }
+            if (!amt || amt <= 0 || amt > fromCard.balanceUSD) { showToast('Insufficient funds'); return; }
+
+            fromCard.balanceUSD -= amt;
+            toCard.balanceUSD += amt;
+            state.transactions.unshift({
+                id: 'tx-' + Date.now(),
+                cardId: fromCard.id,
+                title: `Moved to ${toCard.name}`,
+                category: 'Shopping',
+                amountUSD: -amt,
+                date: 'Just now',
+                icon: 'fa-right-left',
+                color: 'text-sky-400 bg-sky-500/15'
+            });
+            closeModal();
+            renderWalletTab();
+            showToast(`Moved ${formatMoney(amt)} to ${toCard.name}`);
+        }
+
+        function openUtilityModal(serviceName, icon, category) {
+            const card = state.cards[state.activeCardIndex];
+            openModal(`
+                <div class="flex items-center space-x-3 mb-4">
+                    <div class="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                        <i class="fa-solid ${icon} text-base"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-display font-bold text-white">${serviceName}</h3>
+                        <p class="text-[11px] text-slate-400">Paying with ${card.name} (••${card.last4})</p>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-400">Account / Subscriber ID</label>
+                        <input id="util-account-id" type="text" value="9841209384" class="w-full mt-1 bg-obsidian border border-slateborder rounded-xl px-3.5 py-2.5 text-xs font-bold text-white">
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-400">Bill Amount (USD)</label>
+                        <input id="util-amount" type="number" value="35" min="1" class="w-full mt-1 bg-obsidian border border-slateborder rounded-xl px-3.5 py-2.5 text-lg font-bold text-white">
+                    </div>
+                    <button onclick="executeUtilityPayment('${serviceName}', '${icon}', '${category}')" class="w-full py-3.5 rounded-2xl bg-indigo-600 text-white text-xs font-bold mt-1">Pay Bill Now</button>
+                </div>
+            `);
+        }
+
+        function executeUtilityPayment(serviceName, icon, category) {
+            const card = state.cards[state.activeCardIndex];
+            const acct = document.getElementById('util-account-id').value.trim() || 'Account';
+            const amt = parseFloat(document.getElementById('util-amount').value);
+            if (card.frozen) { showToast('Unfreeze card first'); return; }
+            if (!amt || amt <= 0 || amt > card.balanceUSD) { showToast('Insufficient card balance'); return; }
+
+            card.balanceUSD -= amt;
+            state.transactions.unshift({
+                id: 'tx-' + Date.now(),
+                cardId: card.id,
+                title: `${serviceName} (${acct})`,
+                category,
+                amountUSD: -amt,
+                date: 'Just now',
+                icon,
+                color: 'text-amberFintech bg-amber-500/15'
+            });
+            closeModal();
+            renderWalletTab();
+            showToast(`Paid ${formatMoney(amt)} for ${serviceName}`);
+        }
+
+        function selectCardAtIndex(idx, smoothScroll = true) {
+            const clamped = Math.max(0, Math.min(state.cards.length - 1, idx));
+            state.activeCardIndex = clamped;
+            updateCarouselActiveStyling();
+            if (smoothScroll) {
+                scrollCarouselToCard(clamped);
+            }
+            renderHomeTransactions();
+            syncPrivacyClasses();
+        }
+
+        function slideCardBy(delta) {
+            const nextIdx = Math.max(0, Math.min(state.cards.length - 1, state.activeCardIndex + delta));
+            selectCardAtIndex(nextIdx, true);
+        }
+
+        function scrollCarouselToCard(idx) {
+            const carousel = document.getElementById('cards-carousel');
+            const slides = carousel.querySelectorAll('.card-slide');
+            if (!slides[idx]) return;
+            isProgrammaticCarouselScroll = true;
+            const slide = slides[idx];
+            const targetLeft = slide.offsetLeft - (carousel.clientWidth - slide.offsetWidth) / 2;
+            carousel.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' });
+            setTimeout(() => { isProgrammaticCarouselScroll = false; }, 380);
+        }
+
+        function updateCarouselActiveStyling() {
+            const carousel = document.getElementById('cards-carousel');
+            const slides = carousel.querySelectorAll('.card-slide');
+            slides.forEach((el, idx) => {
+                if (idx === state.activeCardIndex) {
+                    el.classList.remove('scale-[0.95]', 'opacity-70');
+                    el.classList.add('scale-100', 'opacity-100', 'ring-2', 'ring-indigo-500/75', 'shadow-xl', 'shadow-black/50');
+                } else {
+                    el.classList.add('scale-[0.95]', 'opacity-70');
+                    el.classList.remove('scale-100', 'opacity-100', 'ring-2', 'ring-indigo-500/75', 'shadow-xl', 'shadow-black/50');
+                }
+            });
+
+            const dots = document.getElementById('card-dots').children;
+            Array.from(dots).forEach((dot, idx) => {
+                dot.className = `h-1.5 rounded-full transition-all duration-300 ${idx === state.activeCardIndex ? 'w-5 bg-indigo-500' : 'w-1.5 bg-slate-700 hover:bg-slate-500'}`;
+            });
+
+            const activeCard = state.cards[state.activeCardIndex];
+            if (activeCard) {
+                document.getElementById('freeze-label').innerText = activeCard.frozen ? 'Unfreeze' : 'Freeze';
+                document.getElementById('active-card-indicator-label').innerText = `Selected: ${activeCard.name} (••${activeCard.last4})`;
+            }
+        }
+
+        function initCarouselInteractions() {
+            const carousel = document.getElementById('cards-carousel');
+            let scrollDebounce = null;
+
+            // Detect centered card while swiping or scrolling horizontally
+            carousel.addEventListener('scroll', () => {
+                if (isProgrammaticCarouselScroll) return;
+                clearTimeout(scrollDebounce);
+                scrollDebounce = setTimeout(() => {
+                    const slides = carousel.querySelectorAll('.card-slide');
+                    const center = carousel.scrollLeft + carousel.clientWidth / 2;
+                    let closestIdx = state.activeCardIndex;
+                    let minDist = Infinity;
+
+                    slides.forEach((slide, idx) => {
+                        const slideCenter = slide.offsetLeft + slide.offsetWidth / 2;
+                        const dist = Math.abs(center - slideCenter);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            closestIdx = idx;
+                        }
+                    });
+
+                    if (closestIdx !== state.activeCardIndex && closestIdx < state.cards.length) {
+                        state.activeCardIndex = closestIdx;
+                        updateCarouselActiveStyling();
+                        if (state.filterHomeTxByActiveCard) {
+                            renderHomeTransactions();
+                            syncPrivacyClasses();
+                        }
+                    }
+                }, 60);
+            }, { passive: true });
+
+            // Mouse drag-to-slide support for desktop browsers
+            let isDown = false;
+            let startX = 0;
+            let startScrollLeft = 0;
+
+            carousel.addEventListener('mousedown', (e) => {
+                isDown = true;
+                carousel.dataset.wasDragged = '';
+                carousel.classList.add('is-dragging');
+                startX = e.pageX - carousel.offsetLeft;
+                startScrollLeft = carousel.scrollLeft;
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (!isDown) return;
+                isDown = false;
+                carousel.classList.remove('is-dragging');
+                setTimeout(() => { carousel.dataset.wasDragged = ''; }, 50);
+            });
+
+            carousel.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - carousel.offsetLeft;
+                const walk = (x - startX) * 1.35;
+                if (Math.abs(walk) > 6) {
+                    carousel.dataset.wasDragged = 'true';
+                }
+                carousel.scrollLeft = startScrollLeft - walk;
+            });
+
+            // Convert vertical mouse wheel over carousel into horizontal slide
+            carousel.addEventListener('wheel', (e) => {
+                if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                    e.preventDefault();
+                    carousel.scrollLeft += e.deltaY;
+                }
+            }, { passive: false });
+        }
+
+        function toggleTxFilterByCard() {
+            state.filterHomeTxByActiveCard = !state.filterHomeTxByActiveCard;
+            renderHomeTransactions();
+            syncPrivacyClasses();
+        }
+
+        function renderHomeTransactions() {
+            const txList = document.getElementById('home-transactions-list');
+            const filterBtn = document.getElementById('btn-filter-card-tx');
+            const activeCard = state.cards[state.activeCardIndex];
+
+            txList.innerHTML = '';
+            let list = state.transactions;
+
+            if (state.filterHomeTxByActiveCard && activeCard) {
+                filterBtn.innerText = `${activeCard.name} Only`;
+                filterBtn.classList.add('bg-indigo-600/20', 'text-indigo-300', 'border-indigo-500/40');
+                list = state.transactions.filter(t => t.cardId === activeCard.id);
+            } else {
+                filterBtn.innerText = 'All Cards';
+                filterBtn.classList.remove('bg-indigo-600/20', 'text-indigo-300', 'border-indigo-500/40');
+            }
+
+            if (list.length === 0) {
+                txList.innerHTML = `<div class="bg-slatecard/60 border border-slateborder rounded-2xl p-5 text-center text-xs text-slate-400">No transactions on ${activeCard.name} yet</div>`;
+                return;
+            }
+
+            list.slice(0, 6).forEach(tx => {
+                txList.appendChild(createTransactionRow(tx));
+            });
+        }
+
+        // ==========================================
+        // ADDABLE & REMOVABLE CARDS LOGIC
+        // ==========================================
+        function openAddCardModal() {
+            selectedNewCardTheme = cardThemes[1];
+            const swatchesHTML = cardThemes.map((t, i) => `
+                <button type="button" onclick="selectNewCardTheme(${i})" id="theme-swatch-${i}" class="w-8 h-8 rounded-full ${t.swatch} border-2 ${i === 1 ? 'border-white scale-110' : 'border-transparent opacity-75'} transition"></button>
+            `).join('');
+
+            openModal(`
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <h3 class="text-lg font-display font-bold text-white">Add New Card</h3>
+                        <p class="text-xs text-slate-400">Instant virtual or linked card issuance</p>
+                    </div>
+                    <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center">
+                        <i class="fa-solid fa-xmark text-xs"></i>
+                    </button>
+                </div>
+
+                <!-- Live Mini Card Preview -->
+                <div id="new-card-preview" class="rounded-2xl p-4 bg-gradient-to-br ${selectedNewCardTheme.gradient} border mb-4 transition-all duration-300">
+                    <div class="flex justify-between items-center">
+                        <span id="preview-card-name" class="text-xs font-bold uppercase tracking-wider text-white/90">Travel Vault</span>
+                        <span id="preview-card-network" class="text-xs font-extrabold italic text-white">VISA</span>
+                    </div>
+                    <div class="my-3">
+                        <div class="text-[10px] text-white/60">Initial Balance</div>
+                        <div id="preview-card-balance" class="text-xl font-display font-extrabold text-white">$1,000.00</div>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-white/75 font-mono">
+                        <span id="preview-card-holder">${state.user.name.toUpperCase()}</span>
+                        <span>•••• 8842 · EXP 11/30</span>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-400">Card Label</label>
+                            <input id="new-card-name" oninput="updateNewCardPreview()" type="text" value="Travel Vault" placeholder="e.g. Savings" class="w-full mt-1 bg-obsidian border border-slateborder rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-400">Network</label>
+                            <select id="new-card-network" onchange="updateNewCardPreview()" class="w-full mt-1 bg-obsidian border border-slateborder rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-indigo-500">
+                                <option value="VISA">VISA</option>
+                                <option value="MASTERCARD">MASTERCARD</option>
+                                <option value="RUPAY">RUPAY</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-400">Cardholder Name</label>
+                            <input id="new-card-holder" oninput="updateNewCardPreview()" type="text" value="${state.user.name.toUpperCase()}" class="w-full mt-1 bg-obsidian border border-slateborder rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-400">Initial Balance (USD)</label>
+                            <input id="new-card-balance" oninput="updateNewCardPreview()" type="number" value="1000" min="0" class="w-full mt-1 bg-obsidian border border-slateborder rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-400 block mb-1.5">Card Finish</label>
+                        <div class="flex items-center space-x-3">
+                            ${swatchesHTML}
+                        </div>
+                    </div>
+
+                    <button onclick="createNewCard()" class="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 mt-2">
+                        Issue & Add Card
+                    </button>
+                </div>
+            `);
+        }
+
+        function selectNewCardTheme(idx) {
+            selectedNewCardTheme = cardThemes[idx];
+            cardThemes.forEach((_, i) => {
+                const sw = document.getElementById(`theme-swatch-${i}`);
+                if (!sw) return;
+                if (i === idx) {
+                    sw.classList.add('border-white', 'scale-110');
+                    sw.classList.remove('border-transparent', 'opacity-75');
+                } else {
+                    sw.classList.remove('border-white', 'scale-110');
+                    sw.classList.add('border-transparent', 'opacity-75');
+                }
+            });
+            const preview = document.getElementById('new-card-preview');
+            if (preview) {
+                preview.className = `rounded-2xl p-4 bg-gradient-to-br ${selectedNewCardTheme.gradient} border mb-4 transition-all duration-300`;
+            }
+        }
+
+        function updateNewCardPreview() {
+            const name = document.getElementById('new-card-name').value.trim() || 'Custom Card';
+            const network = document.getElementById('new-card-network').value;
+            const holder = document.getElementById('new-card-holder').value.trim().toUpperCase() || state.user.name.toUpperCase();
+            const bal = parseFloat(document.getElementById('new-card-balance').value) || 0;
+
+            document.getElementById('preview-card-name').innerText = name;
+            document.getElementById('preview-card-network').innerText = network;
+            document.getElementById('preview-card-holder').innerText = holder;
+            document.getElementById('preview-card-balance').innerText = formatMoney(bal);
+        }
+
+        function createNewCard() {
+            const name = document.getElementById('new-card-name').value.trim() || 'Virtual Card';
+            const network = document.getElementById('new-card-network').value;
+            const holder = document.getElementById('new-card-holder').value.trim().toUpperCase() || state.user.name.toUpperCase();
+            const balanceUSD = Math.max(0, parseFloat(document.getElementById('new-card-balance').value) || 0);
+
+            const prefix = network === 'MASTERCARD' ? '5419' : (network === 'RUPAY' ? '6074' : '4539');
+            const p2 = Math.floor(1000 + Math.random() * 9000);
+            const p3 = Math.floor(1000 + Math.random() * 9000);
+            const last4 = String(Math.floor(1000 + Math.random() * 9000));
+            const cvv = String(Math.floor(100 + Math.random() * 900));
+
+            const newCard = {
+                id: 'card-' + Date.now(),
+                name,
+                holder,
+                network,
+                last4,
+                fullNumber: `${prefix}  ${p2}  ${p3}  ${last4}`,
+                expiry: '11/30',
+                cvv,
+                balanceUSD,
+                frozen: false,
+                gradient: selectedNewCardTheme.gradient
+            };
+
+            state.cards.push(newCard);
+            if (balanceUSD > 0) {
+                state.transactions.unshift({
+                    id: 'tx-' + Date.now(),
+                    cardId: newCard.id,
+                    title: `${name} Initial Funding`,
+                    category: 'Income',
+                    amountUSD: balanceUSD,
+                    date: 'Just now',
+                    icon: 'fa-credit-card',
+                    color: 'text-emeraldFintech bg-emerald-500/15'
+                });
+            }
+
+            closeModal();
+            state.activeCardIndex = state.cards.length - 1;
+            renderWalletTab(true);
+            showToast(`${name} (••${last4}) added to wallet`);
+        }
+
+        function confirmRemoveActiveCard() {
+            if (state.cards.length <= 1) {
+                showToast('You must keep at least 1 active card in your wallet');
+                return;
+            }
+            const card = state.cards[state.activeCardIndex];
+            openModal(`
+                <div class="text-center py-2">
+                    <div class="w-12 h-12 rounded-2xl bg-rose-500/15 text-roseFintech flex items-center justify-center mx-auto mb-3">
+                        <i class="fa-solid fa-trash-can text-lg"></i>
+                    </div>
+                    <h3 class="text-lg font-display font-bold text-white">Remove ${card.name}?</h3>
+                    <p class="text-xs text-slate-400 mt-1 max-w-[270px] mx-auto">
+                        Card ending in <span class="text-white font-bold">••${card.last4}</span> (${formatMoney(card.balanceUSD)}) will be removed from your carousel.
+                    </p>
+                    <div class="grid grid-cols-2 gap-2.5 mt-5">
+                        <button onclick="closeModal()" class="py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold">Cancel</button>
+                        <button onclick="executeRemoveActiveCard()" class="py-3 rounded-2xl bg-roseFintech hover:opacity-90 text-white text-xs font-bold">Remove Card</button>
+                    </div>
+                </div>
+            `);
+        }
+
+        function executeRemoveActiveCard() {
+            const removed = state.cards.splice(state.activeCardIndex, 1)[0];
+            state.activeCardIndex = Math.max(0, state.activeCardIndex - 1);
+            closeModal();
+            renderWalletTab(true);
+            showToast(`Removed ${removed.name} (••${removed.last4})`);
+        }
+
+        function createTransactionRow(tx) {
+            const div = document.createElement('div');
+            div.className = 'bg-slatecard/90 border border-slateborder rounded-2xl p-3.5 flex items-center justify-between';
+            const isPositive = tx.amountUSD >= 0;
+            div.innerHTML = `
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl ${tx.color} flex items-center justify-center shrink-0">
+                        <i class="fa-solid ${tx.icon} text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-white">${tx.title}</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">${tx.category} · ${tx.date}</div>
+                    </div>
+                </div>
+                <div class="text-xs font-bold ${isPositive ? 'text-emeraldFintech' : 'text-white'} money-val">
+                    ${formatMoney(tx.amountUSD, true)}
+                </div>
+            `;
+            return div;
+        }
+
+        function toggleCardFreeze() {
+            const card = state.cards[state.activeCardIndex];
+            card.frozen = !card.frozen;
+            renderWalletTab();
+            showToast(card.frozen ? `${card.name} has been frozen` : `${card.name} is active again`);
+        }
+
+        function toggleCardDetails() {
+            state.revealCardDetails = !state.revealCardDetails;
+            renderWalletTab();
+        }
+
+        function copyActiveCardNumber() {
+            const card = state.cards[state.activeCardIndex];
+            const temp = document.createElement('textarea');
+            temp.value = card.fullNumber.replace(/\s+/g, '');
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            showToast(`Copied ${card.name} number`);
+        }
+
+        // Quick Actions Modal (Send, Add Money, Exchange)
+        function openActionModal(type) {
+            const activeCard = state.cards[state.activeCardIndex];
+            if (type === 'send') {
+                openModal(`
+                    <h3 class="text-lg font-display font-bold text-white mb-1">Send Money</h3>
+                    <p class="text-xs text-slate-400 mb-4">Instant zero-fee transfer from ${activeCard.name}</p>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-400">Recipient Handle or Email</label>
+                            <input id="send-recipient" type="text" value="@sarah.jenkins" class="w-full mt-1 bg-obsidian border border-slateborder rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-400">Amount (USD)</label>
+                            <input id="send-amount" type="number" value="75" min="1" class="w-full mt-1 bg-obsidian border border-slateborder rounded-xl px-3.5 py-2.5 text-lg font-bold text-white focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <button onclick="executeSendMoney()" class="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold shadow-lg mt-2">
+                            Confirm & Send
+                        </button>
+                    </div>
+                `);
+            } else if (type === 'add') {
+                openModal(`
+                    <h3 class="text-lg font-display font-bold text-white mb-1">Top Up Wallet</h3>
+                    <p class="text-xs text-slate-400 mb-4">Instant deposit to ${activeCard.name}</p>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-400">Deposit Amount (USD)</label>
+                            <input id="add-amount" type="number" value="500" min="10" class="w-full mt-1 bg-obsidian border border-slateborder rounded-xl px-3.5 py-2.5 text-lg font-bold text-white focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <button onclick="executeAddMoney()" class="w-full py-3.5 rounded-2xl bg-emeraldFintech hover:opacity-90 text-obsidian text-sm font-extrabold shadow-lg mt-2">
+                            Add Funds Instantly
+                        </button>
+                    </div>
+                `);
+            } else if (type === 'exchange') {
+                openModal(`
+                    <h3 class="text-lg font-display font-bold text-white mb-1">FX Currency Converter</h3>
+                    <p class="text-xs text-slate-400 mb-4">Interbank mid-market rates · Zero markup</p>
+                    <div class="bg-obsidian border border-slateborder rounded-2xl p-4 space-y-2 text-xs">
+                        <div class="flex justify-between"><span class="text-slate-400">1 USD</span><span class="font-bold text-white">0.92 EUR</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">1 USD</span><span class="font-bold text-white">0.79 GBP</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">1 USD</span><span class="font-bold text-white">134.50 NPR</span></div>
+                    </div>
+                    <button onclick="closeModal()" class="w-full py-3 rounded-2xl bg-slate-800 text-white text-xs font-bold mt-4">Done</button>
+                `);
+            }
+        }
+
+        function executeSendMoney() {
+            const card = state.cards[state.activeCardIndex];
+            if (card.frozen) {
+                showToast('Unfreeze card before sending money');
+                return;
+            }
+            const recipient = document.getElementById('send-recipient').value.trim() || '@peer';
+            const amt = parseFloat(document.getElementById('send-amount').value);
+            if (!amt || amt <= 0 || amt > card.balanceUSD) {
+                showToast('Invalid or insufficient balance');
+                return;
+            }
+            card.balanceUSD -= amt;
+            state.transactions.unshift({
+                id: 'tx-' + Date.now(),
+                cardId: card.id,
+                title: `Transfer to ${recipient}`,
+                category: 'Shopping',
+                amountUSD: -amt,
+                date: 'Just now',
+                icon: 'fa-paper-plane',
+                color: 'text-indigo-400 bg-indigo-500/15'
+            });
+            closeModal();
+            renderWalletTab();
+            showToast(`Sent ${formatMoney(amt)} to ${recipient}`);
+        }
+
+        function executeAddMoney() {
+            const card = state.cards[state.activeCardIndex];
+            const amt = parseFloat(document.getElementById('add-amount').value);
+            if (!amt || amt <= 0) return;
+            card.balanceUSD += amt;
+            state.transactions.unshift({
+                id: 'tx-' + Date.now(),
+                cardId: card.id,
+                title: 'Instant Bank Top-Up',
+                category: 'Income',
+                amountUSD: amt,
+                date: 'Just now',
+                icon: 'fa-plus',
+                color: 'text-emeraldFintech bg-emerald-500/15'
+            });
+            closeModal();
+            renderWalletTab();
+            showToast(`Added ${formatMoney(amt)} to ${card.name}`);
+        }
+
+        // ==========================================
+        // TAB 2: ANALYTICS RENDER & INTERACTIVITY
+        // ==========================================
+        const analyticsDatasets = {
+            Week: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                spent: [45, 110, 32, 85, 160, 210, 64],
+                income: [0, 450, 0, 0, 850, 0, 0]
+            },
+            Month: {
+                labels: ['W1', 'W2', 'W3', 'W4'],
+                spent: [420, 580, 390, 450],
+                income: [1100, 950, 1200, 1000]
+            },
+            Year: {
+                labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+                spent: [4800, 5200, 4650, 5120],
+                income: [12400, 13100, 12800, 14200]
+            }
+        };
+
+        function setAnalyticsTimeframe(tf) {
+            state.analyticsTimeframe = tf;
+            ['Week', 'Month', 'Year'].forEach(item => {
+                const btn = document.getElementById(`tf-${item}`);
+                if (item === tf) {
+                    btn.classList.add('bg-indigo-600', 'text-white');
+                    btn.classList.remove('text-slate-400');
+                } else {
+                    btn.classList.remove('bg-indigo-600', 'text-white');
+                    btn.classList.add('text-slate-400');
+                }
+            });
+            renderAnalyticsTab();
+        }
+
+        function renderAnalyticsTab() {
+            const ds = analyticsDatasets[state.analyticsTimeframe];
+            // Include live newly added spending/income in Month view
+            const liveSpentExtra = state.transactions
+                .filter(t => t.date === 'Just now' && t.amountUSD < 0)
+                .reduce((a, b) => a + Math.abs(b.amountUSD), 0);
+            const liveIncomeExtra = state.transactions
+                .filter(t => t.date === 'Just now' && t.amountUSD > 0)
+                .reduce((a, b) => a + b.amountUSD, 0);
+
+            const totalSpent = ds.spent.reduce((a, b) => a + b, 0) + liveSpentExtra;
+            const totalIncome = ds.income.reduce((a, b) => a + b, 0) + liveIncomeExtra;
+            const netSavings = Math.max(0, totalIncome - totalSpent);
+
+            document.getElementById('kpi-income').innerText = formatMoney(totalIncome);
+            document.getElementById('kpi-spent').innerText = formatMoney(totalSpent);
+            document.getElementById('kpi-savings').innerText = formatMoney(netSavings);
+
+            // Budget bar
+            document.getElementById('budget-used-text').innerText = formatMoney(totalSpent);
+            document.getElementById('budget-limit-text').innerText = formatMoney(state.budgetLimitUSD);
+            const pct = Math.min(100, Math.round((totalSpent / state.budgetLimitUSD) * 100));
+            const bar = document.getElementById('budget-progress-bar');
+            bar.style.width = `${pct}%`;
+            bar.className = `h-full rounded-full transition-all duration-500 ${pct > 85 ? 'bg-roseFintech' : 'bg-gradient-to-r from-indigo-500 to-violet-500'}`;
+
+            // Render Interactive SVG Bar Chart
+            const chartContainer = document.getElementById('analytics-chart-container');
+            const maxVal = Math.max(...ds.income, ...ds.spent, 100);
+            let barsHTML = `<div class="w-full h-full flex items-end justify-between pt-4 pb-6 px-2 space-x-2">`;
+            ds.labels.forEach((lbl, i) => {
+                const sVal = ds.spent[i] + (i === ds.labels.length - 1 ? liveSpentExtra : 0);
+                const iVal = ds.income[i] + (i === ds.labels.length - 1 ? liveIncomeExtra : 0);
+                const sHeight = Math.max(8, Math.round((sVal / maxVal) * 100));
+                const iHeight = Math.max(6, Math.round((iVal / maxVal) * 100));
+
+                barsHTML += `
+                    <div onclick="inspectChartBar('${lbl}', ${sVal}, ${iVal})" class="flex-1 flex flex-col items-center h-full justify-end cursor-pointer group">
+                        <div class="w-full flex items-end justify-center space-x-1 h-28">
+                            <div style="height: ${iHeight}%" class="w-2.5 bg-emerald-400/80 group-hover:bg-emerald-400 rounded-t-md transition-all"></div>
+                            <div style="height: ${sHeight}%" class="w-2.5 bg-indigo-500 group-hover:bg-indigo-400 rounded-t-md transition-all"></div>
+                        </div>
+                        <span class="text-[10px] font-semibold text-slate-400 group-hover:text-white mt-2">${lbl}</span>
+                    </div>
+                `;
+            });
+            barsHTML += `</div>`;
+            chartContainer.innerHTML = barsHTML;
+
+            // Category Breakdown
+            const categories = [
+                { name: 'Food & Dining', color: 'bg-amberFintech', icon: 'fa-utensils' },
+                { name: 'Shopping', color: 'bg-indigo-500', icon: 'fa-bag-shopping' },
+                { name: 'Travel', color: 'bg-sky-400', icon: 'fa-plane' },
+                { name: 'Subscriptions', color: 'bg-purple-500', icon: 'fa-music' },
+                { name: 'Bills', color: 'bg-roseFintech', icon: 'fa-file-invoice' }
+            ];
+
+            const catContainer = document.getElementById('category-breakdown-list');
+            catContainer.innerHTML = '';
+
+            const expenseTxs = state.transactions.filter(t => t.amountUSD < 0);
+            const totalExpenseSum = expenseTxs.reduce((a, b) => a + Math.abs(b.amountUSD), 0) || 1;
+
+            categories.forEach(cat => {
+                const matching = expenseTxs.filter(t => t.category === cat.name);
+                const catSum = matching.reduce((a, b) => a + Math.abs(b.amountUSD), 0);
+                const sharePct = Math.round((catSum / totalExpenseSum) * 100);
+                const isSelected = state.selectedCategoryFilter === cat.name;
+
+                const row = document.createElement('div');
+                row.onclick = () => filterAnalyticsCategory(isSelected ? null : cat.name);
+                row.className = `bg-slatecard border ${isSelected ? 'border-indigo-500 ring-1 ring-indigo-500/40' : 'border-slateborder'} rounded-2xl p-3.5 cursor-pointer hover:border-slate-600 transition`;
+                row.innerHTML = `
+                    <div class="flex items-center justify-between text-xs mb-2">
+                        <div class="flex items-center space-x-2.5">
+                            <span class="w-7 h-7 rounded-lg ${cat.color}/20 text-white flex items-center justify-center">
+                                <i class="fa-solid ${cat.icon} text-[11px]"></i>
+                            </span>
+                            <div>
+                                <span class="font-bold text-white">${cat.name}</span>
+                                <span class="text-[10px] text-slate-400 ml-1.5">(${matching.length} tx)</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-bold text-white money-val">${formatMoney(catSum)}</span>
+                            <span class="text-[10px] text-slate-400 ml-1">${sharePct}%</span>
+                        </div>
+                    </div>
+                    <div class="w-full h-1.5 bg-obsidian rounded-full overflow-hidden">
+                        <div class="h-full ${cat.color} rounded-full" style="width: ${sharePct}%"></div>
+                    </div>
+                `;
+                catContainer.appendChild(row);
+            });
+
+            // Render Filtered Transactions below
+            const txHeading = document.getElementById('analytics-tx-heading');
+            const clearBtn = document.getElementById('btn-clear-cat-filter');
+            const listEl = document.getElementById('analytics-transactions-list');
+            listEl.innerHTML = '';
+
+            let filtered = state.transactions;
+            if (state.selectedCategoryFilter) {
+                filtered = state.transactions.filter(t => t.category === state.selectedCategoryFilter);
+                txHeading.innerText = `${state.selectedCategoryFilter} Transactions (${filtered.length})`;
+                clearBtn.classList.remove('hidden');
+            } else {
+                txHeading.innerText = 'All Period Transactions';
+                clearBtn.classList.add('hidden');
+            }
+
+            filtered.forEach(tx => listEl.appendChild(createTransactionRow(tx)));
+            syncPrivacyClasses();
+        }
+
+        function inspectChartBar(label, spent, income) {
+            document.getElementById('chart-hover-val').innerHTML = `
+                <span class="text-indigo-400">${label}:</span> Spent <span class="money-val">${formatMoney(spent)}</span> · In <span class="text-emeraldFintech money-val">${formatMoney(income)}</span>
+            `;
+            syncPrivacyClasses();
+        }
+
+        function filterAnalyticsCategory(catName) {
+            state.selectedCategoryFilter = catName;
+            renderAnalyticsTab();
+        }
+
+        function openBudgetModal() {
+            openModal(`
+                <h3 class="text-lg font-display font-bold text-white mb-1">Edit Monthly Budget</h3>
+                <p class="text-xs text-slate-400 mb-4">Set a target spending threshold in USD</p>
+                <input id="new-budget-input" type="number" value="${state.budgetLimitUSD}" min="100" class="w-full bg-obsidian border border-slateborder rounded-xl px-4 py-3 text-lg font-bold text-white focus:outline-none focus:border-indigo-500">
+                <button onclick="saveNewBudget()" class="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold mt-4">Save Budget Limit</button>
+            `);
+        }
+
+        function saveNewBudget() {
+            const val = parseFloat(document.getElementById('new-budget-input').value);
+            if (val && val > 0) {
+                state.budgetLimitUSD = val;
+                closeModal();
+                renderAnalyticsTab();
+                showToast('Monthly budget limit updated');
+            }
+        }
+
+        // ==========================================
+        // TAB 3: SCAN QR & MY QR CODE
+        // ==========================================
+        const sampleQRTargets = [
+            { merchant: 'Blue Bottle Coffee', category: 'Food & Dining', amountUSD: 6.50, icon: 'fa-mug-hot' },
+            { merchant: 'Alex Rivera (@alex.r)', category: 'Shopping', amountUSD: 45.00, icon: 'fa-user-check' },
+            { merchant: 'ConEdison Electric Bill', category: 'Bills', amountUSD: 84.00, icon: 'fa-file-invoice-dollar' }
+        ];
+
+        function setScanSubMode(mode) {
+            const scannerDiv = document.getElementById('scan-sub-scanner');
+            const myqrDiv = document.getElementById('scan-sub-myqr');
+            const btnScanner = document.getElementById('btn-mode-scanner');
+            const btnMyqr = document.getElementById('btn-mode-myqr');
+
+            if (mode === 'scanner') {
+                scannerDiv.classList.remove('hidden');
+                myqrDiv.classList.add('hidden');
+                btnScanner.classList.add('bg-indigo-600', 'text-white');
+                btnScanner.classList.remove('text-slate-400');
+                btnMyqr.classList.remove('bg-indigo-600', 'text-white');
+                btnMyqr.classList.add('text-slate-400');
+            } else {
+                scannerDiv.classList.add('hidden');
+                myqrDiv.classList.remove('hidden');
+                btnMyqr.classList.add('bg-indigo-600', 'text-white');
+                btnMyqr.classList.remove('text-slate-400');
+                btnScanner.classList.remove('bg-indigo-600', 'text-white');
+                btnScanner.classList.add('text-slate-400');
+                document.getElementById('myqr-name').innerText = state.user.name;
+                document.getElementById('myqr-handle').innerText = state.user.handle;
+            }
+        }
+
+        function toggleFlashlight() {
+            state.flashlightOn = !state.flashlightOn;
+            const overlay = document.getElementById('flashlight-overlay');
+            const btn = document.getElementById('btn-flashlight');
+            if (state.flashlightOn) {
+                overlay.classList.remove('hidden');
+                btn.classList.add('text-amber-300', 'border-amber-400/50');
+                showToast('Camera torch enabled');
+            } else {
+                overlay.classList.add('hidden');
+                btn.classList.remove('text-amber-300', 'border-amber-400/50');
+            }
+        }
+
+        function simulateGalleryUpload() {
+            showToast('Scanning QR image from gallery...');
+            setTimeout(() => triggerSimulatedScan(1), 650);
+        }
+
+        function triggerSimulatedScan(presetIndex) {
+            const target = sampleQRTargets[presetIndex] || sampleQRTargets[0];
+            let cardOptions = state.cards.map((c, idx) => `
+                <option value="${idx}">${c.name} (${formatMoney(c.balanceUSD)})</option>
+            `).join('');
+
+            openModal(`
+                <div class="flex items-center space-x-3 mb-4">
+                    <div class="w-11 h-11 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                        <i class="fa-solid ${target.icon} text-lg"></i>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-emeraldFintech">QR Code Detected</span>
+                        <h3 class="text-base font-display font-bold text-white">${target.merchant}</h3>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-400">Payment Amount (USD)</label>
+                        <input id="qr-pay-amount" type="number" step="0.01" value="${target.amountUSD.toFixed(2)}" class="w-full mt-1 bg-obsidian border border-slateborder rounded-xl px-3.5 py-2.5 text-xl font-extrabold text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-400">Pay From Card</label>
+                        <select id="qr-pay-card" class="w-full mt-1 bg-obsidian border border-slateborder rounded-xl px-3.5 py-3 text-xs font-bold text-white focus:outline-none focus:border-indigo-500">
+                            ${cardOptions}
+                        </select>
+                    </div>
+                    <button onclick="completeQRPayment('${target.merchant}', '${target.category}', '${target.icon}')" class="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold shadow-lg mt-2">
+                        Pay Now
+                    </button>
+                </div>
+            `);
+        }
+
+        function completeQRPayment(merchant, category, icon) {
+            const amt = parseFloat(document.getElementById('qr-pay-amount').value);
+            const cardIdx = parseInt(document.getElementById('qr-pay-card').value);
+            const card = state.cards[cardIdx];
+
+            if (card.frozen) {
+                showToast(`${card.name} is frozen! Choose another card.`);
+                return;
+            }
+            if (!amt || amt <= 0 || amt > card.balanceUSD) {
+                showToast('Invalid amount or insufficient balance');
+                return;
+            }
+
+            card.balanceUSD -= amt;
+            state.transactions.unshift({
+                id: 'tx-' + Date.now(),
+                cardId: card.id,
+                title: merchant,
+                category: category,
+                amountUSD: -amt,
+                date: 'Just now',
+                icon: icon,
+                color: 'text-indigo-400 bg-indigo-500/15'
+            });
+
+            closeModal();
+            switchTab('wallet');
+            showToast(`Paid ${formatMoney(amt)} to ${merchant}`);
+        }
+
+        function openRequestAmountModal() {
+            openModal(`
+                <h3 class="text-lg font-display font-bold text-white mb-1">Set QR Request Amount</h3>
+                <p class="text-xs text-slate-400 mb-4">Embed an exact sum into your personal QR code</p>
+                <input id="qr-req-input" type="number" step="0.01" value="${state.qrRequestAmountUSD || 25}" class="w-full bg-obsidian border border-slateborder rounded-xl px-4 py-3 text-lg font-bold text-white focus:outline-none focus:border-indigo-500">
+                <div class="grid grid-cols-2 gap-2.5 mt-4">
+                    <button onclick="clearQRRequest()" class="py-3 rounded-2xl bg-slate-800 text-slate-300 text-xs font-bold">Clear</button>
+                    <button onclick="applyQRRequest()" class="py-3 rounded-2xl bg-indigo-600 text-white text-xs font-bold">Update QR</button>
+                </div>
+            `);
+        }
+
+        function applyQRRequest() {
+            const val = parseFloat(document.getElementById('qr-req-input').value);
+            if (val && val > 0) {
+                state.qrRequestAmountUSD = val;
+                const pill = document.getElementById('myqr-request-pill');
+                pill.classList.remove('hidden');
+                document.getElementById('myqr-request-val').innerText = formatMoney(val);
+                closeModal();
+                showToast('QR updated with requested amount');
+            }
+        }
+
+        function clearQRRequest() {
+            state.qrRequestAmountUSD = 0;
+            document.getElementById('myqr-request-pill').classList.add('hidden');
+            closeModal();
+        }
+
+        function copyPaymentLink() {
+            const temp = document.createElement('textarea');
+            temp.value = `https://obsidianpay.io/${state.user.handle.replace('@', '')}`;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            showToast('Personal payment link copied!');
+        }
+
+        // ==========================================
+        // TAB 4: PROFILE & SETTINGS
+        // ==========================================
+        function renderProfileTab() {
+            document.getElementById('profile-display-name').innerText = state.user.name;
+            document.getElementById('profile-display-email').innerText = state.user.email;
+            document.getElementById('header-greeting').innerText = state.user.name;
+            document.getElementById('currency-selector').value = state.currency;
+
+            // Sync Privacy Toggle Switch
+            const privSwitch = document.getElementById('toggle-privacy-switch');
+            const knob = privSwitch.querySelector('span');
+            if (state.privacyMode) {
+                privSwitch.classList.remove('bg-slate-700');
+                privSwitch.classList.add('bg-indigo-600');
+                knob.classList.remove('translate-x-0');
+                knob.classList.add('translate-x-5');
+            } else {
+                privSwitch.classList.add('bg-slate-700');
+                privSwitch.classList.remove('bg-indigo-600');
+                knob.classList.add('translate-x-0');
+                knob.classList.remove('translate-x-5');
+            }
+
+            // Linked Banks List
+            const banksList = document.getElementById('linked-banks-list');
+            banksList.innerHTML = '';
+            state.linkedBanks.forEach(bank => {
+                const div = document.createElement('div');
+                div.className = 'p-4 flex items-center justify-between';
+                div.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-xl bg-slate-800 text-slate-300 flex items-center justify-center">
+                            <i class="fa-solid fa-building-columns text-xs"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-white">${bank.name}</div>
+                            <div class="text-[11px] text-slate-400">${bank.mask} · ${bank.status}</div>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-circle-check text-emeraldFintech text-xs"></i>
+                `;
+                banksList.appendChild(div);
+            });
+        }
+
+        function togglePrivacyMode() {
+            state.privacyMode = !state.privacyMode;
+            const eyeBtn = document.getElementById('btn-header-eye');
+            eyeBtn.innerHTML = state.privacyMode ? '<i class="fa-solid fa-eye-slash text-xs text-indigo-400"></i>' : '<i class="fa-solid fa-eye text-xs"></i>';
+            syncPrivacyClasses();
+            if (state.activeTab === 'profile') renderProfileTab();
+            showToast(state.privacyMode ? 'Privacy mode ON: Balances hidden' : 'Balances visible');
+        }
+
+        function toggleGenericSwitch(btn, label) {
+            const knob = btn.querySelector('span');
+            const isOn = btn.classList.contains('bg-indigo-600');
+            if (isOn) {
+                btn.classList.remove('bg-indigo-600');
+                btn.classList.add('bg-slate-700');
+                knob.classList.remove('translate-x-5');
+                knob.classList.add('translate-x-0');
+                showToast(`${label} disabled`);
+            } else {
+                btn.classList.add('bg-indigo-600');
+                btn.classList.remove('bg-slate-700');
+                knob.classList.add('translate-x-5');
+                knob.classList.remove('translate-x-0');
+                showToast(`${label} enabled`);
+            }
+        }
+
+        function changeCurrency(newCurrency) {
+            state.currency = newCurrency;
+            if (state.activeTab === 'wallet') renderWalletTab();
+            if (state.activeTab === 'analytics') renderAnalyticsTab();
+            showToast(`Display currency switched to ${newCurrency}`);
+        }
+
+        function openEditProfileModal() {
+            openModal(`
+                <h3 class="text-lg font-display font-bold text-white mb-4">Edit Personal Details</h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-400">Full Name</label>
+                        <input id="edit-name" type="text" value="${state.user.name}" class="w-full mt-1 bg-obsidian border border-slateborder rounded-xl px-3.5 py-2.5 text-xs font-bold text-white">
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-400">Email Address</label>
+                        <input id="edit-email" type="email" value="${state.user.email}" class="w-full mt-1 bg-obsidian border border-slateborder rounded-xl px-3.5 py-2.5 text-xs font-bold text-white">
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-400">Wallet Handle</label>
+                        <input id="edit-handle" type="text" value="${state.user.handle}" class="w-full mt-1 bg-obsidian border border-slateborder rounded-xl px-3.5 py-2.5 text-xs font-bold text-white">
+                    </div>
+                    <button onclick="saveProfileDetails()" class="w-full py-3.5 rounded-2xl bg-indigo-600 text-white text-xs font-bold mt-2">Save Changes</button>
+                </div>
+            `);
+        }
+
+        function saveProfileDetails() {
+            state.user.name = document.getElementById('edit-name').value.trim() || state.user.name;
+            state.user.email = document.getElementById('edit-email').value.trim() || state.user.email;
+            state.user.handle = document.getElementById('edit-handle').value.trim() || state.user.handle;
+            closeModal();
+            renderProfileTab();
+            showToast('Profile details updated');
+        }
+
+        function openChangePinModal() {
+            openModal(`
+                <h3 class="text-lg font-display font-bold text-white mb-1">Change Vault PIN</h3>
+                <p class="text-xs text-slate-400 mb-4">Enter a new 4-digit security PIN</p>
+                <input type="password" maxlength="4" placeholder="••••" class="w-full text-center tracking-[1em] bg-obsidian border border-slateborder rounded-xl py-3 text-xl font-bold text-white">
+                <button onclick="closeModal(); showToast('Security PIN updated successfully')" class="w-full py-3.5 rounded-2xl bg-indigo-600 text-white text-xs font-bold mt-4">Update PIN</button>
+            `);
+        }
+
+        function openDevicesModal() {
+            openModal(`
+                <h3 class="text-lg font-display font-bold text-white mb-3">Active Sessions</h3>
+                <div class="space-y-2.5 text-xs">
+                    <div class="bg-obsidian border border-slateborder rounded-2xl p-3.5 flex justify-between items-center">
+                        <div><div class="font-bold text-white">iPhone 16 Pro</div><div class="text-slate-400 text-[11px]">This Device · Active Now</div></div>
+                        <span class="text-emeraldFintech font-bold">Current</span>
+                    </div>
+                    <div class="bg-obsidian border border-slateborder rounded-2xl p-3.5 flex justify-between items-center">
+                        <div><div class="font-bold text-white">MacBook Air M3</div><div class="text-slate-400 text-[11px]">San Francisco · 2h ago</div></div>
+                        <button onclick="closeModal(); showToast('Remote session revoked')" class="text-roseFintech font-bold">Revoke</button>
+                    </div>
+                </div>
+            `);
+        }
+
+        function openLinkBankModal() {
+            openModal(`
+                <h3 class="text-lg font-display font-bold text-white mb-1">Link Bank Account</h3>
+                <p class="text-xs text-slate-400 mb-4">Instant Plaid open-banking verification</p>
+                <div class="space-y-3">
+                    <input id="new-bank-name" type="text" placeholder="Bank Name (e.g. Bank of America)" class="w-full bg-obsidian border border-slateborder rounded-xl px-3.5 py-2.5 text-xs font-bold text-white">
+                    <button onclick="addNewBank()" class="w-full py-3.5 rounded-2xl bg-indigo-600 text-white text-xs font-bold">Connect Instantly</button>
+                </div>
+            `);
+        }
+
+        function addNewBank() {
+            const name = document.getElementById('new-bank-name').value.trim() || 'Capital One 360';
+            const randomMask = '•••• ' + Math.floor(1000 + Math.random() * 9000);
+            state.linkedBanks.push({ name, mask: randomMask, status: 'Instant Verified' });
+            closeModal();
+            renderProfileTab();
+            showToast(`${name} linked successfully`);
+        }
+
+        function exportMonthlyStatement() {
+            let csv = 'Date,Merchant,Category,Amount (USD)\n';
+            state.transactions.forEach(t => {
+                csv += `"${t.date}","${t.title}","${t.category}",${t.amountUSD.toFixed(2)}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Obsidian_Pay_Statement_Nov2026.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Monthly CSV statement downloaded');
+        }
+
+        // ==========================================
+        // MODAL & TOAST UTILITIES
+        // ==========================================
+        function openModal(htmlContent) {
+            document.getElementById('modal-content').innerHTML = htmlContent;
+            document.getElementById('modal-backdrop').classList.remove('hidden');
+            const sheet = document.getElementById('modal-sheet');
+            sheet.classList.remove('hidden', 'animate-sheet-in');
+            void sheet.offsetWidth;
+            sheet.classList.add('animate-sheet-in');
+        }
+
+        function closeModal() {
+            document.getElementById('modal-backdrop').classList.add('hidden');
+            document.getElementById('modal-sheet').classList.add('hidden');
+        }
+
+        let toastTimeout = null;
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2400);
+        }
+
+        // ==========================================
+        // INITIALIZATION ON LOAD
+        // ==========================================
+        window.onload = function() {
+            initCarouselInteractions();
+            renderWalletTab(true);
+            nbRender();
+            syncPrivacyClasses();
+        };
+    </script>
+</body>
+</html>

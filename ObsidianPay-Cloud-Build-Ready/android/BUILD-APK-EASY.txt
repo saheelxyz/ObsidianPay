@@ -1,0 +1,21 @@
+OBSIDIAN PAY — BUILD APK WITHOUT ANDROID STUDIO
+
+This project includes a GitHub Actions workflow that builds an installable debug APK in the cloud.
+
+ONE-TIME STEPS:
+1. Create or sign in to a GitHub account at https://github.com
+2. Create a new repository (you can name it ObsidianPay).
+3. Upload the CONTENTS of this project folder (the android folder's contents) to the repository.
+   Important: .github/workflows/build-apk.yml must be in the repository's top-level .github/workflows folder.
+4. Open the repository's Actions tab.
+5. Select "Build Obsidian Pay APK" and click "Run workflow" (if it did not start automatically).
+6. Wait for the run to finish successfully, open that run, and download the artifact named
+   "ObsidianPay-Android-APK". Extract it to get app-debug.apk.
+7. Send app-debug.apk to your Android phone and tap it to install. If Android asks, allow
+   installation from that source.
+
+NOTES:
+- This produces a debug-signed APK for personal testing/installation, not a Play Store release.
+- The app wraps the included Obsidian Pay HTML in an Android WebView.
+- Bank balances/transactions remain manual or CSV-import based. There is no live Nepal bank API.
+- Never add bank passwords, PINs, OTPs, JWTs, or API secrets to this project.
